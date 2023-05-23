@@ -1,0 +1,99 @@
+# SPDX-FileCopyrightText: 2023 Steffen Vogel <post@steffenvogel.de>
+# SPDX-License-Identifier: Apache-2.0
+
+name: Test
+
+on:
+- push
+- pull_request
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install system dependencies
+      run: sudo apt-get install -y
+        libsodium-dev
+        libclang-dev
+        pkg-config
+        cmake
+        ninja-build
+
+    - name: Checkout liboqs
+      uses: actions/checkout@v3
+      with:
+        repository: open-quantum-safe/liboqs
+        ref: main
+        path: liboqs
+  
+    - name: Install liboqs
+      run: |
+        mkdir -p liboqs/build && cd liboqs/build
+        cmake -GNinja \
+          -DOQS_BUILD_ONLY_LIB=ON \
+          -DOQS_MINIMAL_BUILD="KEM_kyber_512;KEM_classic_mceliece_460896" \
+          -DBUILD_SHARED_LIBS=ON \
+          -DCMAKE_INSTALL_PREFIX=/usr ..
+        sudo ninja install
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version-file: go.mod
+        check-latest: true
+
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+
+    - name: Set up cargo cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          ~/.cargo/crates.toml
+          ~/.cargo/.crates2.json
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Install Rosenpass tool
+      uses: actions-rs/cargo@v1
+      with:
+        command: install
+        args: --force rosenpass
+
+    - name: Set up gotestfmt
+      run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
+
+    - name: Run Go tests
+      run: |
+        set -euo pipefail
+        go test -v \
+          -json \
+          -coverpkg ./... \
+          -coverprofile cover.profile \
+          ./... 2>&1 | \
+        tee /tmp/gotest.log | \
+        gotestfmt
+
+    - name: Upload test log
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: test-log
+        path: /tmp/gotest.log
+        if-no-files-found: error
+
+    - name: Report integration test coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: cover.profile
