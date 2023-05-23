@@ -3,6 +3,6 @@ Upstream-Name: go-rosenpass
 Upstream-Contact: Steffen Vogel <post@steffenvogel.de>
 Source: https://github.com/stv0g/go-rosenpass
 
-Files: go.mod go.sum */testdata/*
+Files: go.mod go.sum testdata/**
 Copyright: 2023 Steffen Vogel <post@steffenvogel.de>
 License: CC0-1.0
