@@ -85,10 +85,20 @@ func generateKeyPair(alg string) ([]byte, []byte, error) {
 	return sk, pk, nil
 }
 
-func generateEphemeralKeyPair() ([]byte, []byte, error) {
-	return generateKeyPair(kemAlgEphemeral)
+func generateEphemeralKeyPair() (esk ephemeralPrivateKey, epk ephemeralPublicKey, err error) {
+	sk, pk, err := generateKeyPair(kemAlgEphemeral)
+
+	copy(esk[:], sk)
+	copy(epk[:], pk)
+
+	return
 }
 
-func generateStaticKeyPair() ([]byte, []byte, error) {
-	return generateKeyPair(kemAlgStatic)
+func generateStaticKeyPair() (ssk staticPrivateKey, spk staticPublicKey, err error) {
+	sk, pk, err := generateKeyPair(kemAlgStatic)
+
+	copy(ssk[:], sk)
+	copy(spk[:], pk)
+
+	return
 }
