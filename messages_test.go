@@ -25,19 +25,19 @@ func TestMessages(t *testing.T) {
 		var err error
 		var m2 initHello
 		m1 := initHello{
-			sidi:  *(*sessionID)(rand(sessionIDSize)),
-			epki:  *(*ephemeralPublicKey)(rand(ephemeralPublicKeySize)),
-			sctr:  *(*staticCipherText)(rand(staticCipherTextSize)),
-			pidiC: *(*[48]byte)(rand(48)),
-			auth:  *(*authTag)(rand(authSize)),
+			sidi:  sid(rand(sidSize)),
+			epki:  epk(rand(epkSize)),
+			sctr:  sct(rand(sctSize)),
+			pidiC: [pidSize + authSize]byte(rand(pidSize + authSize)),
+			auth:  [authSize]byte(rand(authSize)),
 		}
 
 		buf := m1.MarshalBinary()
-		require.Len(buf, initHelloSize)
+		require.Len(buf, initHelloMsgSize)
 
 		sz, err := m2.UnmarshalBinary(buf)
 		require.NoError(err)
-		require.Equal(initHelloSize, sz)
+		require.Equal(initHelloMsgSize, sz)
 
 		require.Equal(m1, m2)
 	})
@@ -48,24 +48,20 @@ func TestMessages(t *testing.T) {
 		var err error
 		var m2 respHello
 		m1 := respHello{
-			sidr: *(*sessionID)(rand(sessionIDSize)),
-			sidi: *(*sessionID)(rand(sessionIDSize)),
-			ecti: *(*ephemeralCipherText)(rand(ephemeralCipherTextSize)),
-			scti: *(*staticCipherText)(rand(staticCipherTextSize)),
-			auth: *(*authTag)(rand(authSize)),
-			biscuit: sealedBiscuit{
-				data:  *(*[biscuitSize]byte)(rand(biscuitSize)),
-				nonce: *(*nonce)(rand(nonceSize)),
-				auth:  *(*authTag)(rand(authSize)),
-			},
+			sidr:    sid(rand(sidSize)),
+			sidi:    sid(rand(sidSize)),
+			ecti:    ect(rand(ectSize)),
+			scti:    sct(rand(sctSize)),
+			auth:    authTag(rand(authSize)),
+			biscuit: sealedBiscuit(rand(sealedBiscuitSize)),
 		}
 
 		buf := m1.MarshalBinary()
-		require.Len(buf, respHelloSize)
+		require.Len(buf, respHelloMsgSize)
 
 		sz, err := m2.UnmarshalBinary(buf)
 		require.NoError(err)
-		require.Equal(respHelloSize, sz)
+		require.Equal(respHelloMsgSize, sz)
 
 		require.Equal(m1, m2)
 	})
@@ -76,25 +72,21 @@ func TestMessages(t *testing.T) {
 		var err error
 		var m2 initConf
 		m1 := initConf{
-			sidi: *(*sessionID)(rand(sessionIDSize)),
-			sidr: *(*sessionID)(rand(sessionIDSize)),
-			biscuit: sealedBiscuit{
-				data:  *(*[biscuitSize]byte)(rand(biscuitSize)),
-				nonce: *(*nonce)(rand(nonceSize)),
-				auth:  *(*authTag)(rand(authSize)),
-			},
-			auth: *(*authTag)(rand(authSize)),
+			sidi:    sid(rand(sidSize)),
+			sidr:    sid(rand(sidSize)),
+			biscuit: sealedBiscuit(rand(sealedBiscuitSize)),
+			auth:    authTag(rand(authSize)),
 		}
 
 		m1.sidi, err = generateSessionID()
 		require.NoError(err)
 
 		buf := m1.MarshalBinary()
-		require.Len(buf, initConfSize)
+		require.Len(buf, initConfMsgSize)
 
 		sz, err := m2.UnmarshalBinary(buf)
 		require.NoError(err)
-		require.Equal(initConfSize, sz)
+		require.Equal(initConfMsgSize, sz)
 
 		require.Equal(m1, m2)
 	})
@@ -105,20 +97,20 @@ func TestMessages(t *testing.T) {
 		var err error
 		var m2 emptyData
 		m1 := emptyData{
-			sid:  *(*sessionID)(rand(sessionIDSize)),
-			ctr:  *(*[8]byte)(rand(8)),
-			auth: *(*authTag)(rand(authSize)),
+			sid:  sid(rand(sidSize)),
+			ctr:  [8]byte(rand(8)),
+			auth: authTag(rand(authSize)),
 		}
 
 		m1.sid, err = generateSessionID()
 		require.NoError(err)
 
 		buf := m1.MarshalBinary()
-		require.Len(buf, emptyDataSize)
+		require.Len(buf, emptyDataMsgSize)
 
 		sz, err := m2.UnmarshalBinary(buf)
 		require.NoError(err)
-		require.Equal(emptyDataSize, sz)
+		require.Equal(emptyDataMsgSize, sz)
 
 		require.Equal(m1, m2)
 	})

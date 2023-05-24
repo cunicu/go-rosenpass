@@ -8,9 +8,9 @@ import (
 )
 
 var (
-	ErrMsgTruncated = errors.New("message is truncated")
-	ErrInvalidLen   = errors.New("invalid message length")
-	ErrWrongMsgType = errors.New("wrong message type")
+	ErrMsgTruncated   = errors.New("message is truncated")
+	ErrInvalidLen     = errors.New("invalid message length")
+	ErrInvalidMsgType = errors.New("invalid message type")
 )
 
 type payload interface {
@@ -77,7 +77,7 @@ func (e *envelope) UnmarshalBinary(buf []byte) (int, error) {
 	case msgTypeEmptyData:
 		e.payload = &emptyData{}
 	default:
-		return -1, ErrWrongMsgType
+		return -1, ErrInvalidMsgType
 	}
 
 	o := 4
@@ -100,13 +100,13 @@ func (e *envelope) UnmarshalBinary(buf []byte) (int, error) {
 
 type biscuit struct {
 	// Hash(spki) – Identifies the initiator
-	pidi peerID
+	pidi pid
 
 	// The biscuit number (replay protection)
-	biscuitNo [12]byte
+	biscuitNo biscuitNo
 
 	// Chaining key
-	ck chainingKey
+	ck key
 }
 
 func (b *biscuit) MarshalBinary() []byte {
@@ -128,51 +128,25 @@ func (b *biscuit) UnmarshalBinary(buf []byte) (int, error) {
 	return o, nil
 }
 
-type sealedBiscuit struct {
-	data [biscuitSize]byte
-
-	nonce nonce
-	auth  authTag
-}
-
-func (b *sealedBiscuit) MarshalBinary() []byte {
-	return concat(sealedBiscuitSize,
-		b.data[:],
-		b.nonce[:],
-		b.auth[:])
-}
-
-func (b *sealedBiscuit) UnmarshalBinary(buf []byte) (int, error) {
-	if len(buf) != sealedBiscuitSize {
-		return -1, ErrInvalidLen
-	}
-
-	o := copy(b.data[:], buf)
-	o += copy(b.nonce[:], buf[o:])
-	o += copy(b.auth[:], buf[o:])
-
-	return o, nil
-}
-
 type initHello struct {
 	// Randomly generated connection id
-	sidi sessionID
+	sidi sid
 
 	// Kyber 512 Ephemeral Public Key
-	epki ephemeralPublicKey
+	epki epk
 
 	// Classic McEliece Ciphertext
-	sctr staticCipherText
+	sctr sct
 
 	// Encryped: 16 byte hash of McEliece initiator static key
-	pidiC [peerIDSize + authSize]byte
+	pidiC [pidSize + authSize]byte
 
 	// Encrypted TAI64N Time Stamp (against replay attacks)
-	auth authTag
+	auth [authSize]byte
 }
 
 func (m *initHello) MarshalBinary() []byte {
-	return concat(initHelloSize,
+	return concat(initHelloMsgSize,
 		m.sidi[:],
 		m.epki[:],
 		m.sctr[:],
@@ -181,7 +155,7 @@ func (m *initHello) MarshalBinary() []byte {
 }
 
 func (m *initHello) UnmarshalBinary(buf []byte) (int, error) {
-	if len(buf) != initHelloSize {
+	if len(buf) != initHelloMsgSize {
 		return -1, ErrInvalidLen
 	}
 
@@ -196,36 +170,36 @@ func (m *initHello) UnmarshalBinary(buf []byte) (int, error) {
 
 type respHello struct {
 	// Randomly generated connection id
-	sidr sessionID
+	sidr sid
 
 	// Copied from InitHello
-	sidi sessionID
+	sidi sid
 
 	// Kyber 512 Ephemeral Ciphertext
-	ecti ephemeralCipherText
+	ecti ect
 
 	// Classic McEliece Ciphertext
-	scti staticCipherText
-
-	// Empty encrypted message (just an auth tag)
-	auth authTag
+	scti sct
 
 	// Responders handshake state in encrypted form
 	biscuit sealedBiscuit
+
+	// Empty encrypted message (just an auth tag)
+	auth [authSize]byte
 }
 
 func (m *respHello) MarshalBinary() []byte {
-	return concat(respHelloSize,
+	return concat(respHelloMsgSize,
 		m.sidr[:],
 		m.sidi[:],
 		m.ecti[:],
 		m.scti[:],
-		m.biscuit.MarshalBinary(),
+		m.biscuit[:],
 		m.auth[:])
 }
 
 func (m *respHello) UnmarshalBinary(buf []byte) (int, error) {
-	if len(buf) != respHelloSize {
+	if len(buf) != respHelloMsgSize {
 		return -1, ErrInvalidLen
 	}
 
@@ -233,13 +207,7 @@ func (m *respHello) UnmarshalBinary(buf []byte) (int, error) {
 	o += copy(m.sidi[:], buf[o:])
 	o += copy(m.ecti[:], buf[o:])
 	o += copy(m.scti[:], buf[o:])
-
-	if p, err := m.biscuit.UnmarshalBinary(buf[o : o+sealedBiscuitSize]); err != nil {
-		return -1, err
-	} else {
-		o += p
-	}
-
+	o += copy(m.biscuit[:], buf[o:])
 	o += copy(m.auth[:], buf[o:])
 
 	return o, nil
@@ -247,40 +215,34 @@ func (m *respHello) UnmarshalBinary(buf []byte) (int, error) {
 
 type initConf struct {
 	// Copied from InitHello
-	sidi sessionID
+	sidi sid
 
 	// Copied from RespHello
-	sidr sessionID
+	sidr sid
 
 	// Responders handshake state in encrypted form
 	biscuit sealedBiscuit
 
 	// Empty encrypted message (just an auth tag)
-	auth authTag
+	auth [authSize]byte
 }
 
 func (m *initConf) MarshalBinary() []byte {
-	return concat(initConfSize,
+	return concat(initConfMsgSize,
 		m.sidi[:],
 		m.sidr[:],
-		m.biscuit.MarshalBinary(),
+		m.biscuit[:],
 		m.auth[:])
 }
 
 func (m *initConf) UnmarshalBinary(buf []byte) (int, error) {
-	if len(buf) != initConfSize {
+	if len(buf) != initConfMsgSize {
 		return -1, ErrInvalidLen
 	}
 
 	o := copy(m.sidi[:], buf)
 	o += copy(m.sidr[:], buf[o:])
-
-	if p, err := m.biscuit.UnmarshalBinary(buf[o : o+sealedBiscuitSize]); err != nil {
-		return -1, err
-	} else {
-		o += p
-	}
-
+	o += copy(m.biscuit[:], buf[o:])
 	o += copy(m.auth[:], buf[o:])
 
 	return o, nil
@@ -288,24 +250,24 @@ func (m *initConf) UnmarshalBinary(buf []byte) (int, error) {
 
 type emptyData struct {
 	// Copied from RespHello
-	sid sessionID
+	sid sid
 
 	// Nonce
 	ctr [8]byte
 
 	// Empty encrypted message (just an auth tag)
-	auth authTag
+	auth [authSize]byte
 }
 
 func (m *emptyData) MarshalBinary() []byte {
-	return concat(emptyDataSize,
+	return concat(emptyDataMsgSize,
 		m.sid[:],
 		m.ctr[:],
 		m.auth[:])
 }
 
 func (m *emptyData) UnmarshalBinary(buf []byte) (int, error) {
-	if len(buf) != emptyDataSize {
+	if len(buf) != emptyDataMsgSize {
 		return -1, ErrInvalidLen
 	}
 
