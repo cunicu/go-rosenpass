@@ -6,6 +6,7 @@ package rosenpass_test
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -186,6 +187,10 @@ func (p *Peer) outfileReader(c *exec.Cmd) (string, error) {
 
 			n, err := rd.Read(buf)
 			if err != nil {
+				if errors.Is(err, io.EOF) {
+					return
+				}
+
 				log.Fatalf("Failed to read key: %s", err)
 			}
 

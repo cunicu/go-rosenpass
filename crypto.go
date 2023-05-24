@@ -6,7 +6,10 @@ package rosenpass
 import (
 	"crypto/cipher"
 	"crypto/hmac"
-	"hash"
+	"crypto/rand"
+	"errors"
+	"fmt"
+	hashpkg "hash"
 
 	"github.com/open-quantum-safe/liboqs-go/oqs"
 	"golang.org/x/crypto/blake2s"
@@ -18,51 +21,46 @@ const (
 	kemAlgEphemeral = "Kyber512"
 )
 
+// Generate a new Classic McEliece key pair
+func GenerateKeyPair() (ssk ssk, spk spk, err error) {
+	return generateKeyPair(kemAlgStatic)
+}
+
 // A keyed hash function with one 32-byte input, one variable-size input, and one 32-byte output.
 // As keyed hash function we use the HMAC construction with BLAKE2s as the inner hash function.
-func Hash(key, data []byte, more ...[]byte) []byte {
-	mac := hmac.New(func() hash.Hash {
+func hash(key key, data []byte, more ...[]byte) [hashSize]byte {
+	mac := hmac.New(func() hashpkg.Hash {
 		h, _ := blake2s.New256(nil)
 		return h
 	}, key[:])
 
 	mac.Write(data)
 
-	h := mac.Sum(nil)
+	h := [hashSize]byte(mac.Sum(nil))
 
 	if len(more) == 0 {
 		return h
 	}
 
-	return Hash(h, more[0], more[1:]...)
+	return hash(h, more[0], more[1:]...)
 }
 
-func lhash(data []byte, more ...[]byte) []byte {
-	return Hash(hashProtocol, data, more...)
+func lhash(data []byte, more ...[]byte) [hashSize]byte {
+	return hash(hashProtocol, data, more...)
 }
 
-func newAEAD(key []byte) (cipher.AEAD, error) {
-	return chacha20poly1305.New(key)
+func newAEAD(k key) (cipher.AEAD, error) {
+	return chacha20poly1305.New(k[:])
 }
 
-func newXAEAD(key []byte) (cipher.AEAD, error) {
-	return chacha20poly1305.NewX(key)
+func newXAEAD(k key) (cipher.AEAD, error) {
+	return chacha20poly1305.NewX(k[:])
 }
 
-func newStaticKEM(key []byte) (*oqs.KeyEncapsulation, error) {
+func newKEM(alg string, key []byte) (*oqs.KeyEncapsulation, error) {
 	kem := &oqs.KeyEncapsulation{}
 
-	if err := kem.Init(kemAlgStatic, key); err != nil {
-		return nil, err
-	}
-
-	return kem, nil
-}
-
-func newEphemeralKEM(key []byte) (*oqs.KeyEncapsulation, error) {
-	kem := &oqs.KeyEncapsulation{}
-
-	if err := kem.Init(kemAlgEphemeral, key); err != nil {
+	if err := kem.Init(alg, key); err != nil {
 		return nil, err
 	}
 
@@ -85,20 +83,26 @@ func generateKeyPair(alg string) ([]byte, []byte, error) {
 	return sk, pk, nil
 }
 
-func generateEphemeralKeyPair() (esk ephemeralPrivateKey, epk ephemeralPublicKey, err error) {
-	sk, pk, err := generateKeyPair(kemAlgEphemeral)
+func generateSessionID() (sid, error) {
+	i := make([]byte, sidSize)
 
-	copy(esk[:], sk)
-	copy(epk[:], pk)
+	if n, err := rand.Read(i); err != nil {
+		return sid{}, err
+	} else if n != sidSize {
+		return sid{}, errors.New("partial read")
+	}
 
-	return
+	return sid(i), nil
 }
 
-func generateStaticKeyPair() (ssk staticPrivateKey, spk staticPublicKey, err error) {
-	sk, pk, err := generateKeyPair(kemAlgStatic)
+func generateNonce() (nonce, error) {
+	n := make([]byte, nonceSize)
 
-	copy(ssk[:], sk)
-	copy(spk[:], pk)
+	if n, err := rand.Read(n); err != nil {
+		return nonce{}, err
+	} else if n != nonceSize {
+		return nonce{}, fmt.Errorf("partial read")
+	}
 
-	return
+	return nonce(n), nil
 }

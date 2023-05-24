@@ -4,9 +4,11 @@
 package rosenpass
 
 import (
-	"crypto/rand"
-	"errors"
-	"fmt"
+	"encoding/base64"
+
+	"golang.org/x/crypto/blake2s"
+	"golang.org/x/crypto/chacha20poly1305"
+	"golang.org/x/exp/slog"
 )
 
 type msgType uint8
@@ -18,27 +20,44 @@ const (
 	msgTypeEmptyData
 )
 
+func (t msgType) String() string {
+	switch t {
+	case msgTypeInitHello:
+		return "InitHello"
+	case msgTypeRespHello:
+		return "RespHello"
+	case msgTypeInitConf:
+		return "InitConf"
+	case msgTypeEmptyData:
+		return "EmptyData"
+	default:
+		return "<Unknown>"
+	}
+}
+
 const (
-	hashSize  = 32
-	authSize  = 16
-	nonceSize = 24
+	hashSize = blake2s.Size
 
-	sessionIDSize = 4
-	peerIDSize    = hashSize
+	sidSize = 4        // Session ID size
+	pidSize = hashSize // Peer ID size
 
-	presharedKeySize    = 32
-	outputSharedKeySize = hashSize
-	chainingKeySize     = hashSize
+	keySize   = chacha20poly1305.KeySize
+	authSize  = chacha20poly1305.Overhead // ChaCha20-Poly1305 authentication tag
+	nonceSize = chacha20poly1305.NonceSizeX
+
+	pskSize = hashSize // Pre-shared key size
+	oskSize = hashSize // Output-shared key size
+	ckSize  = hashSize // Chaining key size
 
 	// Classic McEliece 460896
-	staticCipherTextSize = 188
-	staticPublicKeySize  = 524160
-	staticPrivateKeySize = 13568
+	sctSize = 188    // Static Cipher-text size
+	spkSize = 524160 // Static public key size
+	sskSize = 13568  // Static secret key size
 
-	//  Kyber-512
-	ephemeralCipherTextSize = 768
-	ephemeralPublicKeySize  = 800
-	ephemeralPrivateKeySize = 1632
+	// Kyber-512
+	ectSize = 768  // Ephemeral cipher text size
+	epkSize = 800  // Ephemeral public key size
+	eskSize = 1632 // Ephemeral secret key size
 
 	// Envelope
 	macSize      = 16
@@ -46,56 +65,38 @@ const (
 	envelopeSize = 1 + 3 + macSize + cookieSize
 
 	// Biscuit
-	ciscuitNoSize     = 12
-	biscuitSize       = peerIDSize + ciscuitNoSize + chainingKeySize
+	biscuitNoSize     = 12
+	biscuitSize       = pidSize + biscuitNoSize + ckSize
 	sealedBiscuitSize = biscuitSize + nonceSize + authSize
 
-	initHelloSize = sessionIDSize + ephemeralPublicKeySize + staticCipherTextSize + peerIDSize + 2*authSize
-	respHelloSize = 2*sessionIDSize + ephemeralCipherTextSize + staticCipherTextSize + biscuitSize + nonceSize + 2*authSize
-	initConfSize  = 2*sessionIDSize + biscuitSize + nonceSize + 2*authSize
-	emptyDataSize = sessionIDSize + 8 + authSize
+	initHelloMsgSize = sidSize + epkSize + sctSize + pidSize + 2*authSize
+	respHelloMsgSize = 2*sidSize + ectSize + sctSize + biscuitSize + nonceSize + 2*authSize
+	initConfMsgSize  = 2*sidSize + biscuitSize + nonceSize + 2*authSize
+	emptyDataMsgSize = sidSize + 8 + authSize
 )
 
 type (
-	sessionID   [sessionIDSize]byte
-	peerID      [peerIDSize]byte
-	hasht       [hashSize]byte
-	nonce       [nonceSize]byte
-	chainingKey [chainingKeySize]byte
+	biscuitNo [biscuitNoSize]byte
 
-	staticCipherText [staticCipherTextSize]byte
-	staticPublicKey  [staticPublicKeySize]byte
-	staticPrivateKey [staticPrivateKeySize]byte
+	authTag       [authSize]byte // Authentication tag
+	cookie        [cookieSize]byte
+	key           [keySize]byte
+	psk           [pskSize]byte
+	mac           [macSize]byte // Message authentication code
+	nonce         [nonceSize]byte
+	sid           [sidSize]byte // Session ID
+	pid           [pidSize]byte // Peer ID
+	sealedBiscuit [sealedBiscuitSize]byte
 
-	ephemeralCipherText [ephemeralCipherTextSize]byte
-	ephemeralPublicKey  [ephemeralPublicKeySize]byte
-	ephemeralPrivateKey [ephemeralPrivateKeySize]byte
-
-	authTag [authSize]byte
-	mac     [macSize]byte
-	cookie  [cookieSize]byte
+	sct []byte // Static Cipher-text
+	spk []byte // Static public key
+	ssk []byte // Static secret key
+	ect []byte // Ephemeral cipher text size
+	epk []byte // Ephemeral public key size
+	esk []byte // Ephemeral secret key size
 )
 
-func generateSessionID() (sessionID, error) {
-	i := make([]byte, 4)
-
-	if n, err := rand.Read(i); err != nil {
-		return sessionID{}, err
-	} else if n != 4 {
-		return sessionID{}, errors.New("failed to generate ID")
-	}
-
-	return *(*sessionID)(i), nil
-}
-
-func generateRandomNonce() ([]byte, error) {
-	nonce := make([]byte, 24)
-
-	if n, err := rand.Read(nonce); err != nil {
-		return nil, err
-	} else if n != 24 {
-		return nil, fmt.Errorf("incomplete read")
-	}
-
-	return nonce, nil
+func (p *pid) LogValue() slog.Value {
+	ps := base64.StdEncoding.EncodeToString(p[:])
+	return slog.StringValue(ps)
 }
