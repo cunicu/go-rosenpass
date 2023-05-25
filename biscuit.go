@@ -11,14 +11,20 @@ func (n *biscuitNo) Inc(i uint64) {
 	n.Store(no)
 }
 
+// TODO: Extend to full 96bit space
 func (n *biscuitNo) Load() uint64 {
-	return binary.BigEndian.Uint64(n[:])
+	return binary.LittleEndian.Uint64(n[:])
 }
 
+// TODO: Extend to full 96bit space
 func (n *biscuitNo) Store(m uint64) {
-	binary.BigEndian.PutUint64(n[:], m)
+	binary.LittleEndian.PutUint64(n[:], m)
 }
 
 func (n *biscuitNo) Larger(m biscuitNo) bool {
 	return n.Load() > m.Load()
+}
+
+func (n *biscuitNo) LargerOrEqual(m biscuitNo) bool {
+	return n.Load() >= m.Load()
 }

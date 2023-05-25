@@ -12,9 +12,14 @@ import (
 )
 
 type PeerConfig struct {
-	Endpoint     *net.UDPAddr // The peers's endpoint
-	PublicKey    spk          // The peer’s public key
-	PresharedKey psk          // The peer's pre-shared key
+	PublicKey    spk // The peer’s public key
+	PresharedKey psk // The peer's pre-shared key
+
+	Endpoint *net.UDPAddr // The peers's endpoint
+}
+
+func (p *PeerConfig) PID() pid {
+	return pid(khPeerID.hash(p.PublicKey[:]))
 }
 
 type peer struct {
@@ -47,7 +52,7 @@ func (s *Server) newPeer(cfg *PeerConfig) (*peer, error) {
 }
 
 func (p *peer) PID() pid {
-	return lhash(lblPeerID, p.spkt[:])
+	return pid(khPeerID.hash(p.spkt[:]))
 }
 
 func (p *peer) Run() error {
@@ -66,9 +71,12 @@ func (p *peer) Run() error {
 		return err
 	}
 
-	if err := p.server.send(m, p); err != nil {
+	if err := p.server.conn.Send(m, p); err != nil {
 		return fmt.Errorf("failed to send: %w", err)
 	}
+
+	p.server.handshakes[hs.sidi] = hs
+	p.logger.Debug("Started new handshake", "sidi", hs.sidi)
 
 	return nil
 }

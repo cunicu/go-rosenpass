@@ -4,6 +4,7 @@
 package rosenpass
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 
@@ -16,11 +17,12 @@ var (
 	ErrSessionNotFound   = errors.New("session not found")
 	ErrInvalidAuthTag    = errors.New("invalid authentication tag")
 	ErrReplayDetected    = errors.New("detected replay")
+	ErrStaleNonce        = errors.New("stale nonce")
 )
 
 type handshake struct {
-	peer   *peer
 	server *Server
+	peer   *peer
 
 	nextMsg msgType // The type of the next expected message
 
@@ -30,6 +32,15 @@ type handshake struct {
 	ck   key // The chaining key
 	eski esk // The initiator’s ephemeral secret key
 	epki epk // The initiator’s ephemeral public key
+
+	txnm uint64 // My transmission nonce
+	txnt uint64 // Their transmission nonce
+
+	txkm key // My transmission key
+	txkt key // Their transmission key
+	osk  key // Output shared key
+
+	biscuit sealedBiscuit
 }
 
 // Handshake phases
@@ -39,7 +50,7 @@ func (hs *handshake) sendInitHello() (*initHello, error) {
 	var err error
 
 	// IHI1: Initialize the chaining key, and bind to the responder’s public key.
-	hs.ck = hash(cki, hs.peer.spkt[:])
+	hs.ck = khCKI.hash(hs.peer.spkt[:])
 
 	// IHI2: The session ID is used to associate packets with the handshake state.
 	if hs.sidi, err = generateSessionID(); err != nil {
@@ -63,7 +74,7 @@ func (hs *handshake) sendInitHello() (*initHello, error) {
 	}
 
 	// IHI6: Tell the responder who the initiator is by transmitting the peer ID.
-	pidi := hs.peer.PID()
+	pidi := hs.server.PID()
 	pidiC, err := hs.encryptAndMix(pidi[:])
 	if err != nil {
 		return nil, err
@@ -93,8 +104,12 @@ func (hs *handshake) sendInitHello() (*initHello, error) {
 
 // Step 2
 func (hs *handshake) handleInitHello(h *initHello) error {
+	// Keep some state for sendRespHello
+	hs.epki = h.epki
+	hs.sidi = h.sidi
+
 	// IHR1: Initialize the chaining key, and bind to the responder’s public key.
-	hs.ck = hash(cki, hs.peer.spkt[:])
+	hs.ck = khCKI.hash(hs.server.spkm[:])
 
 	// IHR4: InitHello includes sidi and epki as part of the protocol transcript, and so we
 	//       mix them into the chaining key to prevent tampering.
@@ -104,18 +119,18 @@ func (hs *handshake) handleInitHello(h *initHello) error {
 	//       secret, and ciphertext into the chaining key, and authenticates the responder.
 	err := hs.decapsAndMix(kemAlgStatic, hs.server.sskm[:], hs.server.spkm[:], h.sctr[:])
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to decapsulate (IHR5): %w", err)
 	}
 
 	// IHR6: Tell the responder who the initiator is by transmitting the peer ID.
 	pidi, err := hs.decryptAndMix(h.pidiC[:])
 	if err != nil {
-		return fmt.Errorf("failed to decrypt peer id: %w", err)
+		return fmt.Errorf("failed to decrypt peer id (IHR6): %w", err)
 	}
 
 	var ok bool
 	if hs.peer, ok = hs.server.peers[pid(pidi)]; !ok {
-		return ErrPeerNotFound
+		return fmt.Errorf("failed to lookup peer %s (IHR6): %w", pid(pidi), ErrPeerNotFound)
 	}
 
 	// IHR7: Ensure the responder has the correct view on spki. Mix in the PSK as optional
@@ -125,7 +140,7 @@ func (hs *handshake) handleInitHello(h *initHello) error {
 	// IHR8: Add a message authentication code to ensure both participants agree on the
 	//       session state and protocol transcript at this point.
 	if _, err := hs.decryptAndMix(h.auth[:]); err != nil {
-		return fmt.Errorf("%w: %w", ErrInvalidAuthTag, err)
+		return fmt.Errorf("%w (IHR8): %w", ErrInvalidAuthTag, err)
 	}
 
 	hs.nextMsg = msgTypeInitConf
@@ -139,7 +154,7 @@ func (hs *handshake) sendRespHello() (*respHello, error) {
 
 	// RHR1: Responder generates a session ID.
 	if hs.sidr, err = generateSessionID(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to generate session id (RHR1): %w", err)
 	}
 
 	// RHR3: Mix both session IDs as part of the protocol transcript.
@@ -148,27 +163,27 @@ func (hs *handshake) sendRespHello() (*respHello, error) {
 	// RHR4: Key encapsulation using the ephemeral key, to provide forward secrecy.
 	ecti, err := hs.encapsAndMix(kemAlgEphemeral, hs.epki[:])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to encapsulate (RHR4): %w", err)
 	}
 
 	// RHR5: Key encapsulation using the initiator’s static key, to authenticate the
 	//       initiator, and non-forward-secret confidentiality.
 	scti, err := hs.encapsAndMix(kemAlgStatic, hs.peer.spkt[:])
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to encapsulate (RHR5): %w", err)
 	}
 
 	// RHR6: The responder transmits their state to the initiator in an encrypted container
 	//       to avoid having to store state.
 	biscuit, err := hs.storeBiscuit()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to store biscuit (RHR6): %w", err)
 	}
 
 	// RHR7: Add a message authentication code for the same reason as above.
 	auth, err := hs.encryptAndMix([]byte{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to encrypt and mix (RHR7): %w", err)
 	}
 
 	return &respHello{
@@ -183,6 +198,9 @@ func (hs *handshake) sendRespHello() (*respHello, error) {
 
 // Step 4
 func (hs *handshake) handleRespHello(r *respHello) error {
+	hs.biscuit = r.biscuit
+	hs.sidr = r.sidr
+
 	// RHI2: Initiator looks up their session state using the session ID they generated.
 	// See: Server.handleEnvelope()
 
@@ -192,13 +210,13 @@ func (hs *handshake) handleRespHello(r *respHello) error {
 
 	// RHI4: Key encapsulation using the ephemeral key, to provide forward secrecy.
 	if err := hs.decapsAndMix(kemAlgEphemeral, hs.eski[:], hs.epki[:], r.ecti[:]); err != nil {
-		return err
+		return fmt.Errorf("failed to decapsulate (RHI4): %w", err)
 	}
 
 	// RHI5: Key encapsulation using the initiator’s static key, to authenticate the
 	//       initiator, and non-forward-secret confidentiality.
-	if err := hs.decapsAndMix(kemAlgStatic, hs.server.spkm[:], hs.server.spkm[:], r.scti[:]); err != nil {
-		return err
+	if err := hs.decapsAndMix(kemAlgStatic, hs.server.sskm[:], hs.server.spkm[:], r.scti[:]); err != nil {
+		return fmt.Errorf("failed to decapsulate (RHI5): %w", err)
 	}
 
 	// RHI6: The responder transmits their state to the initiator in an encrypted container
@@ -207,7 +225,7 @@ func (hs *handshake) handleRespHello(r *respHello) error {
 
 	// RHI7: Add a message authentication code for the same reason as above.
 	if _, err := hs.decryptAndMix(r.auth[:]); err != nil {
-		return fmt.Errorf("%w: %w", ErrInvalidAuthTag, err)
+		return fmt.Errorf("%w (RHI7): %w", ErrInvalidAuthTag, err)
 	}
 
 	return nil
@@ -222,31 +240,35 @@ func (hs *handshake) sendInitConf() (*initConf, error) {
 	//       ensures that both participants agree on the final chaining key.
 	auth, err := hs.encryptAndMix([]byte{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create authentication tag")
+		return nil, fmt.Errorf("failed to create authentication tag (ICI4): %w", err)
 	}
 
 	// ICI7: Derive the transmission keys, and the output shared key for use as WireGuard’s PSK.
-	hs.enterLive()
+	hs.enterLive(false)
 
 	return &initConf{
 		sidi:    hs.sidi,
 		sidr:    hs.sidr,
-		biscuit: sealedBiscuit{}, // TODO
+		biscuit: hs.biscuit,
 		auth:    authTag(auth),
 	}, nil
 }
 
 // Step 6
 func (hs *handshake) handleInitConf(i *initConf) error {
+	// Restore handshake state from message
+	hs.sidi = i.sidi
+	hs.sidr = i.sidr
+
 	// ICR1: Responder loads their biscuit. This restores the state from after RHR6.
 	bNo, err := hs.loadBiscuit(i.biscuit)
 	if err != nil {
-		return fmt.Errorf("failed to load biscuit: %w", err)
+		return fmt.Errorf("failed to load biscuit (ICR1): %w", err)
 	}
 
 	// ICR2: Responder recomputes RHR7, since this step was performed after biscuit encoding.
 	if _, err := hs.encryptAndMix([]byte{}); err != nil {
-		return err
+		return fmt.Errorf("failed to encrypt (ICE2): %w", err)
 	}
 
 	// ICR3: Mix both session IDs as part of the protocol transcript.
@@ -255,53 +277,94 @@ func (hs *handshake) handleInitConf(i *initConf) error {
 	// ICR4: Message authentication code for the same reason as above, which in particular
 	//       ensures that both participants agree on the final chaining key.
 	if _, err := hs.decryptAndMix(i.auth[:]); err != nil {
-		return fmt.Errorf("%w: %w", ErrInvalidAuthTag, err)
+		return fmt.Errorf("%w (ICR4): %w", ErrInvalidAuthTag, err)
 	}
 
 	// ICR5: Biscuit replay detection.
 	if !bNo.Larger(hs.peer.biscuitUsed) {
-		return ErrReplayDetected
+		return fmt.Errorf("%w (ICR5)", ErrReplayDetected)
 	}
 
 	// ICR6: Biscuit replay detection.
 	hs.peer.biscuitUsed = bNo
 
 	// ICR7: Derive the transmission keys, and the output shared key for use as WireGuard’s PSK.
-	hs.enterLive()
+	hs.enterLive(true)
 
 	return nil
 }
 
 // Step 7
 func (hs *handshake) sendEmptyData() (*emptyData, error) {
-	return nil, nil
+	hs.txnm++
+
+	n := make([]byte, nonceSize)
+	binary.LittleEndian.PutUint64(n, hs.txnm)
+
+	aead, err := newAEAD(hs.txkm)
+	if err != nil {
+		return nil, err
+	}
+
+	auth := aead.Seal(nil, n, []byte{}, []byte{})
+
+	return &emptyData{
+		sid:  hs.sidi,
+		ctr:  [8]byte(n),
+		auth: authTag(auth),
+	}, nil
 }
 
 // Step 8
 func (hs *handshake) handleEmptyData(e *emptyData) error {
-	// TODO
+	n := append(e.ctr[:], 0, 0, 0, 0)
+	txnt := binary.LittleEndian.Uint64(e.ctr[:])
+
+	// TODO: Check nonce counter
+	if txnt < hs.txnt {
+		return ErrStaleNonce
+	}
+	hs.txnt = txnt
+
+	aead, err := newAEAD(hs.txkt)
+	if err != nil {
+		return err
+	}
+
+	if _, err := aead.Open(nil, n, e.auth[:], []byte{}); err != nil {
+		return ErrInvalidAuthTag
+	}
+
+	hs.peer.logger.Debug("Handshake completed")
+
 	return nil
 }
 
 // Helpers
 
-func (hs *handshake) enterLive() {
-	hs.peer.logger.Debug("Entered live")
+func (hs *handshake) enterLive(responder bool) {
+	hs.txnm = 0
+	hs.txnt = 0
+	hs.osk = hs.ck.hash(khOSK[:])
 
-	if h, ok := hs.server.handler.(HandshakeHandler); ok {
-		osk := hash(hs.ck, osk[:])
-		hs.peer.logger.Debug("New key", slog.Any("osk", osk))
-
-		h.HandshakeCompleted(hs.peer.PID(), osk)
+	if responder {
+		hs.txkm = hs.ck.hash(khResEnc[:])
+		hs.txkt = hs.ck.hash(khIniEnc[:])
+	} else {
+		hs.txkm = hs.ck.hash(khIniEnc[:])
+		hs.txkt = hs.ck.hash(khResEnc[:])
 	}
+
+	// TODO: Remove key from log
+	hs.peer.logger.Debug("Enter live", slog.Any("osk", khOSK))
 }
 
-func (hs *handshake) mix(more ...[]byte) {
-	hs.ck = hash(hs.ck, lblMix, more...) // TODO: wrong!
+func (hs *handshake) mix(data ...[]byte) {
+	hs.ck = hs.ck.mix(data...)
 }
 
 func (hs *handshake) encryptAndMix(pt []byte) ([]byte, error) {
-	k := hash(hs.ck, hsEnc[:])
+	k := hs.ck.hash(khHsEnc[:])
 	n := nonce{}
 	ad := []byte{}
 
@@ -318,7 +381,7 @@ func (hs *handshake) encryptAndMix(pt []byte) ([]byte, error) {
 }
 
 func (hs *handshake) decryptAndMix(ct []byte) ([]byte, error) {
-	k := hash(hs.ck, hsEnc[:])
+	k := hs.ck.hash(khHsEnc[:])
 	n := nonce{}
 	ad := []byte{}
 
@@ -392,28 +455,26 @@ func (hs *handshake) storeBiscuit() (sealedBiscuit, error) {
 		return sealedBiscuit{}, err
 	}
 
-	ad := lhash(lblBiscuitAdditionalData, hs.server.spkm[:], hs.peer.spkt[:], hs.sidi[:], hs.sidr[:])
-	ct := xaead.Seal(nil, n[:], pt, ad[:])
-	nct := append(n[:], ct...)
+	ad := khBiscuitAdditionalData.hash(hs.server.spkm[:], hs.sidi[:], hs.sidr[:])
+	nct := xaead.Seal(n[:], n[:], pt, ad[:])
 
 	hs.mix(nct)
 
 	return sealedBiscuit(nct), nil
 }
 
-func (hs *handshake) loadBiscuit(nct sealedBiscuit) (biscuitNo, error) {
+func (hs *handshake) loadBiscuit(sb sealedBiscuit) (biscuitNo, error) {
+	nct := sb[:]
 	k := hs.server.biscuitKeys[0]
-
-	n, ct := nct[0:nonceSize], nct[nonceSize:]
-
-	ad := lhash(lblBiscuitAdditionalData, hs.server.spkm[:], hs.sidi[:], hs.sidr[:])
+	n, ct := nct[:nonceSizeX], nct[nonceSizeX:]
+	ad := khBiscuitAdditionalData.hash(hs.server.spkm[:], hs.sidi[:], hs.sidr[:])
 
 	xaead, err := newXAEAD(k)
 	if err != nil {
 		return biscuitNo{}, err
 	}
 
-	pt, err := xaead.Open(k[:], n, ct, ad[:])
+	pt, err := xaead.Open(nil, n, ct, ad[:])
 	if err != nil {
 		return biscuitNo{}, err
 	}
@@ -429,14 +490,15 @@ func (hs *handshake) loadBiscuit(nct sealedBiscuit) (biscuitNo, error) {
 		return biscuitNo{}, ErrPeerNotFound
 	}
 
-	if b.biscuitNo.Larger(hs.peer.biscuitUsed) {
+	// assert(pt.biscuit_no ≤ peer.biscuit_used);
+	if hs.peer.biscuitUsed.LargerOrEqual(b.biscuitNo) {
 		return biscuitNo{}, ErrReplayDetected
 	}
 
 	// Restore the chaining key
 	hs.ck = b.ck
 
-	hs.mix(nct[:])
+	hs.mix(nct)
 
 	// Expose the biscuit no,
 	// so the handshake code can differentiate

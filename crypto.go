@@ -5,11 +5,10 @@ package rosenpass
 
 import (
 	"crypto/cipher"
-	"crypto/hmac"
+	hmacpkg "crypto/hmac"
 	"crypto/rand"
-	"errors"
 	"fmt"
-	hashpkg "hash"
+	"hash"
 
 	"github.com/open-quantum-safe/liboqs-go/oqs"
 	"golang.org/x/crypto/blake2s"
@@ -21,32 +20,43 @@ const (
 	kemAlgEphemeral = "Kyber512"
 )
 
+func blake() hash.Hash {
+	h, _ := blake2s.New256(nil)
+	return h
+}
+
 // Generate a new Classic McEliece key pair
 func GenerateKeyPair() (ssk ssk, spk spk, err error) {
 	return generateKeyPair(kemAlgStatic)
 }
 
-// A keyed hash function with one 32-byte input, one variable-size input, and one 32-byte output.
-// As keyed hash function we use the HMAC construction with BLAKE2s as the inner hash function.
-func hash(key key, data []byte, more ...[]byte) [hashSize]byte {
-	mac := hmac.New(func() hashpkg.Hash {
-		h, _ := blake2s.New256(nil)
-		return h
-	}, key[:])
-
-	mac.Write(data)
-
-	h := [hashSize]byte(mac.Sum(nil))
-
-	if len(more) == 0 {
-		return h
+// Generates a new pre-shared key
+func GeneratePresharedKey() (psk, error) {
+	if k, err := generateKey(pskSize); err != nil {
+		return psk{}, err
+	} else {
+		return psk(k), nil
 	}
-
-	return hash(h, more[0], more[1:]...)
 }
 
-func lhash(data []byte, more ...[]byte) [hashSize]byte {
-	return hash(hashProtocol, data, more...)
+// A keyed hmac function with one 32-byte input, one variable-size input, and one 32-byte output.
+// As keyed hmac function we use the HMAC construction with BLAKE2s as the inner hmac function.
+func (k key) hash(data ...[]byte) key {
+	for _, d := range data {
+		mac := hmacpkg.New(blake, k[:])
+		mac.Write(d)
+		k = key(mac.Sum(nil))
+	}
+
+	return k
+}
+
+func (k key) mix(data ...[]byte) key {
+	for _, d := range data {
+		k = k.hash(lblMix, d)
+	}
+
+	return k
 }
 
 func newAEAD(k key) (cipher.AEAD, error) {
@@ -84,25 +94,29 @@ func generateKeyPair(alg string) ([]byte, []byte, error) {
 }
 
 func generateSessionID() (sid, error) {
-	i := make([]byte, sidSize)
-
-	if n, err := rand.Read(i); err != nil {
+	if s, err := generateKey(sidSize); err != nil {
 		return sid{}, err
-	} else if n != sidSize {
-		return sid{}, errors.New("partial read")
+	} else {
+		return sid(s), nil
 	}
-
-	return sid(i), nil
 }
 
-func generateNonce() (nonce, error) {
-	n := make([]byte, nonceSize)
+func generateNonce() (nonceX, error) {
+	if n, err := generateKey(nonceSizeX); err != nil {
+		return nonceX{}, err
+	} else {
+		return nonceX(n), nil
+	}
+}
 
-	if n, err := rand.Read(n); err != nil {
-		return nonce{}, err
-	} else if n != nonceSize {
-		return nonce{}, fmt.Errorf("partial read")
+func generateKey(l int) ([]byte, error) {
+	p := make([]byte, l)
+
+	if n, err := rand.Read(p); err != nil {
+		return nil, err
+	} else if n != l {
+		return nil, fmt.Errorf("partial read")
 	}
 
-	return nonce(n), nil
+	return p, nil
 }

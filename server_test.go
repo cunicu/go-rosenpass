@@ -9,35 +9,90 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/slog"
 )
+
+type handshakeHandler struct {
+	logger *slog.Logger
+}
+
+func (h *handshakeHandler) HandshakeCompleted(peer pid, osk key) {
+	h.logger.Debug("Handshake completed", "osk", osk, "peer", peer)
+}
+
+func (h *handshakeHandler) HandshakeFailed(pid, error) {
+}
+
+func TestMain(m *testing.M) {
+	textHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	})
+	logger := slog.New(textHandler)
+
+	slog.SetDefault(logger)
+
+	m.Run()
+}
 
 func TestServer(t *testing.T) {
 	require := require.New(t)
 
-	spkt, err := os.ReadFile("spkt.key")
+	psk, err := GeneratePresharedKey()
 	require.NoError(err)
 
-	cfg := &ServerConfig{
+	cfgAlice := Config{
 		Listen: &net.UDPAddr{
 			IP:   net.ParseIP("127.0.0.1"),
 			Port: 1234,
 		},
 		Peers: []PeerConfig{
 			{
-				PublicKey: spk(spkt),
+				PresharedKey: psk,
 				Endpoint: &net.UDPAddr{
 					IP:   net.ParseIP("127.0.0.1"),
 					Port: 1235,
 				},
 			},
 		},
+		Logger: slog.Default().With("peer", "alice"),
 	}
 
-	cfg.PrivateKey, cfg.PublicKey, err = generateKeyPair(kemAlgStatic)
+	cfgBob := Config{
+		Listen: &net.UDPAddr{
+			IP:   net.ParseIP("127.0.0.1"),
+			Port: 1235,
+		},
+		Peers: []PeerConfig{
+			{
+				PresharedKey: psk,
+				Endpoint: &net.UDPAddr{
+					IP:   net.ParseIP("127.0.0.1"),
+					Port: 1234,
+				},
+			},
+		},
+		Logger: slog.Default().With("peer", "bob"),
+	}
+
+	cfgAlice.SecretKey, cfgAlice.PublicKey, err = generateKeyPair(kemAlgStatic)
 	require.NoError(err)
 
-	s, err := NewServer(cfg)
+	cfgBob.SecretKey, cfgBob.PublicKey, err = generateKeyPair(kemAlgStatic)
 	require.NoError(err)
-	require.NoError(s.Run())
-	require.NoError(s.Close())
+
+	cfgAlice.Peers[0].PublicKey = cfgBob.PublicKey
+	cfgBob.Peers[0].PublicKey = cfgAlice.PublicKey
+
+	svrAlice, err := NewUDPServer(cfgAlice)
+	require.NoError(err)
+	require.NoError(svrAlice.Run())
+
+	svrBob, err := NewUDPServer(cfgBob)
+	require.NoError(err)
+	require.NoError(svrBob.Run())
+
+	select {}
+
+	require.NoError(svrAlice.Close())
+	require.NoError(svrBob.Close())
 }

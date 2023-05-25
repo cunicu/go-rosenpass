@@ -29,7 +29,7 @@ func TestMessages(t *testing.T) {
 			epki:  epk(rand(epkSize)),
 			sctr:  sct(rand(sctSize)),
 			pidiC: [pidSize + authSize]byte(rand(pidSize + authSize)),
-			auth:  [authSize]byte(rand(authSize)),
+			auth:  authTag(rand(authSize)),
 		}
 
 		buf := m1.MarshalBinary()

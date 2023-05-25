@@ -3,14 +3,18 @@
 
 package rosenpass
 
+// Precompute heyed hash functions (kh*)
 var (
-	hashProtocol = hash(key{}, lblProtocol)
-
-	cke    = lhash(lblChainingKeyExtract)
-	cki    = lhash(lblChainingKeyInit)
-	mix    = hash(cke, lblMix)
-	osk    = hash(cke, lblUser, lblRosenpass, lblWireGuardPSK)
-	resEnc = hash(cke, lblResponderSessionEncryption)
-	iniEnc = hash(cke, lblInitiatorSessionEncryption)
-	hsEnc  = hash(cke, lblHandshakeEncryption)
+	khProto                 = key{}.hash(lblProtocol)
+	khCKE                   = khProto.hash(lblChainingKeyExtract)
+	khCKI                   = khProto.hash(lblChainingKeyInit)
+	khMAC                   = khProto.hash(lblMAC)
+	khCookie                = khProto.hash(lblCookie)
+	khBiscuitAdditionalData = khProto.hash(lblBiscuitAdditionalData)
+	khPeerID                = khProto.hash(lblPeerID)
+	khMix                   = khCKE.hash(lblMix)
+	khOSK                   = khCKE.hash(lblUser, lblRosenpass, lblWireGuardPSK)
+	khResEnc                = khCKE.hash(lblResponderSessionEncryption)
+	khIniEnc                = khCKE.hash(lblInitiatorSessionEncryption)
+	khHsEnc                 = khCKE.hash(lblHandshakeEncryption)
 )

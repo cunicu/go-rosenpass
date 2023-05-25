@@ -5,10 +5,10 @@ package rosenpass
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 
 	"golang.org/x/crypto/blake2s"
 	"golang.org/x/crypto/chacha20poly1305"
-	"golang.org/x/exp/slog"
 )
 
 type msgType uint8
@@ -35,15 +35,32 @@ func (t msgType) String() string {
 	}
 }
 
+func msgTypeFromPayload(pl payload) msgType {
+	switch pl.(type) {
+	case *initHello:
+		return msgTypeInitHello
+	case *respHello:
+		return msgTypeRespHello
+	case *initConf:
+		return msgTypeInitConf
+	case *emptyData:
+		return msgTypeEmptyData
+	default:
+		return 0
+	}
+}
+
 const (
 	hashSize = blake2s.Size
 
 	sidSize = 4        // Session ID size
 	pidSize = hashSize // Peer ID size
 
-	keySize   = chacha20poly1305.KeySize
-	authSize  = chacha20poly1305.Overhead // ChaCha20-Poly1305 authentication tag
-	nonceSize = chacha20poly1305.NonceSizeX
+	keySize     = chacha20poly1305.KeySize
+	authSize    = chacha20poly1305.Overhead // ChaCha20-Poly1305 authentication tag
+	nonceSize   = chacha20poly1305.NonceSize
+	nonceSizeX  = chacha20poly1305.NonceSizeX
+	txNonceSize = 8 // Nonce for live sessions
 
 	pskSize = hashSize // Pre-shared key size
 	oskSize = hashSize // Output-shared key size
@@ -62,16 +79,16 @@ const (
 	// Envelope
 	macSize      = 16
 	cookieSize   = 16
-	envelopeSize = 1 + 3 + macSize + cookieSize
+	envelopeSize = 4 + macSize + cookieSize
 
 	// Biscuit
 	biscuitNoSize     = 12
 	biscuitSize       = pidSize + biscuitNoSize + ckSize
-	sealedBiscuitSize = biscuitSize + nonceSize + authSize
+	sealedBiscuitSize = biscuitSize + nonceSizeX + authSize
 
 	initHelloMsgSize = sidSize + epkSize + sctSize + pidSize + 2*authSize
-	respHelloMsgSize = 2*sidSize + ectSize + sctSize + biscuitSize + nonceSize + 2*authSize
-	initConfMsgSize  = 2*sidSize + biscuitSize + nonceSize + 2*authSize
+	respHelloMsgSize = 2*sidSize + ectSize + sctSize + biscuitSize + nonceSizeX + 2*authSize
+	initConfMsgSize  = 2*sidSize + biscuitSize + nonceSizeX + 2*authSize
 	emptyDataMsgSize = sidSize + 8 + authSize
 )
 
@@ -79,11 +96,13 @@ type (
 	biscuitNo [biscuitNoSize]byte
 
 	authTag       [authSize]byte // Authentication tag
-	cookie        [cookieSize]byte
 	key           [keySize]byte
+	cookie        [cookieSize]byte
 	psk           [pskSize]byte
 	mac           [macSize]byte // Message authentication code
 	nonce         [nonceSize]byte
+	nonceX        [nonceSizeX]byte
+	txNonce       [txNonceSize]byte
 	sid           [sidSize]byte // Session ID
 	pid           [pidSize]byte // Peer ID
 	sealedBiscuit [sealedBiscuitSize]byte
@@ -94,9 +113,24 @@ type (
 	ect []byte // Ephemeral cipher text size
 	epk []byte // Ephemeral public key size
 	esk []byte // Ephemeral secret key size
+
+	// Some aliases for the public API
+	PeerID = pid
+
+	PresharedKey = psk
+	PublicKey    = spk
+	SecretKey    = ssk
+	Key          = key
 )
 
-func (p *pid) LogValue() slog.Value {
-	ps := base64.StdEncoding.EncodeToString(p[:])
-	return slog.StringValue(ps)
+func (p pid) String() string {
+	return base64.StdEncoding.EncodeToString(p[:])
+}
+
+func (p sid) String() string {
+	return hex.EncodeToString(p[:])
+}
+
+func (p key) String() string {
+	return base64.StdEncoding.EncodeToString(p[:])
 }
