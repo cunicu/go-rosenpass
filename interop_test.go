@@ -10,49 +10,65 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	rp "github.com/stv0g/go-rosenpass"
 )
 
-func TestInteropKeygen(t *testing.T) {
-	require := require.New(t)
+type handshakeHandler struct {
+	keys chan rp.Key
+}
 
-	rp := &Rosenpass{}
+func (h *handshakeHandler) HandshakeCompleted(pid rp.PeerID, key rp.Key) {
+	h.keys <- key
+}
 
-	err := rp.Keygen()
-	require.NoError(err)
-
-	require.NotEmpty(rp.privateKey)
-	require.NotEmpty(rp.publicKey)
+func (h *handshakeHandler) HandshakeFailed(pid rp.PeerID, err error) {
 }
 
 func TestInteropRust2Rust(t *testing.T) {
 	require := require.New(t)
 
+	ssk1, spk1, err := rp.GenerateKeyPair()
+	require.NoError(err)
+
+	ssk2, spk2, err := rp.GenerateKeyPair()
+	require.NoError(err)
+
+	h1 := &handshakeHandler{
+		keys: make(chan rp.Key),
+	}
+
+	h2 := &handshakeHandler{
+		keys: make(chan rp.Key),
+	}
+
 	rp1 := &Rosenpass{
-		Name:    "rp1",
-		Verbose: true,
-		ListenAddr: &net.UDPAddr{
-			IP:   net.ParseIP("127.0.0.1"),
-			Port: 1100,
+		Name: "rp1",
+		Config: rp.Config{
+			Handler:   h1,
+			PublicKey: spk1,
+			SecretKey: ssk1,
+			Listen: &net.UDPAddr{
+				IP:   net.ParseIP("127.0.0.1"),
+				Port: 1100,
+			},
 		},
 	}
 
 	rp2 := &Rosenpass{
-		Name:    "rp2",
-		Verbose: true,
-		// ListenAddr: &net.UDPAddr{
-		// 	IP:   net.ParseIP("127.0.0.1"),
-		// 	Port: 1101,
-		// },
+		Name: "rp2",
+		Config: rp.Config{
+			Handler:   h2,
+			PublicKey: spk2,
+			SecretKey: ssk2,
+			Listen: &net.UDPAddr{
+				IP:   net.ParseIP("127.0.0.1"),
+				Port: 1101,
+			},
+		},
 	}
 
-	require.NoError(rp1.Keygen())
-	require.NoError(rp2.Keygen())
-
-	pr1 := rp2.Peer()
-	pr2 := rp1.Peer()
-
-	pr1.Keys = make(chan []byte)
-	pr2.Keys = make(chan []byte)
+	pr1 := rp2.PeerConfig()
+	pr2 := rp1.PeerConfig()
 
 	rp1.Peers = append(rp1.Peers, pr1)
 	rp2.Peers = append(rp2.Peers, pr2)
@@ -68,12 +84,12 @@ func TestInteropRust2Rust(t *testing.T) {
 	go ex2.Start()
 
 	for i := 0; i < 2; i++ {
-		psk1 := <-pr1.Keys
-		psk2 := <-pr2.Keys
+		psk1 := <-h1.keys
+		psk2 := <-h2.keys
 
 		require.Equal(psk1, psk2, "Keys differ in exchange %d", i)
 
-		t.Logf("OSK: %s\n", base64.StdEncoding.EncodeToString(psk1))
+		t.Logf("OSK: %s\n", base64.StdEncoding.EncodeToString(psk1[:]))
 	}
 
 	require.NoError(ex1.Process.Signal(os.Interrupt))
