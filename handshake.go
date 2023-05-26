@@ -7,8 +7,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-
-	"golang.org/x/exp/slog"
 )
 
 var (
@@ -113,7 +111,7 @@ func (hs *handshake) handleInitHello(h *initHello) error {
 
 	// IHR4: InitHello includes sidi and epki as part of the protocol transcript, and so we
 	//       mix them into the chaining key to prevent tampering.
-	hs.mix(h.sidi[:], h.epki[:])
+	hs.mix(hs.sidi[:], hs.epki[:])
 
 	// IHR5: Key encapsulation using the responder’s public key. Mixes public key, shared
 	//       secret, and ciphertext into the chaining key, and authenticates the responder.
@@ -268,7 +266,7 @@ func (hs *handshake) handleInitConf(i *initConf) error {
 
 	// ICR2: Responder recomputes RHR7, since this step was performed after biscuit encoding.
 	if _, err := hs.encryptAndMix([]byte{}); err != nil {
-		return fmt.Errorf("failed to encrypt (ICE2): %w", err)
+		return fmt.Errorf("failed to encrypt (ICR2): %w", err)
 	}
 
 	// ICR3: Mix both session IDs as part of the protocol transcript.
@@ -290,6 +288,12 @@ func (hs *handshake) handleInitConf(i *initConf) error {
 
 	// ICR7: Derive the transmission keys, and the output shared key for use as WireGuard’s PSK.
 	hs.enterLive(true)
+
+	hs.peer.logger.Debug("Handshake completed")
+
+	for _, h := range hs.server.handlers {
+		h.HandshakeCompleted(hs.peer.PID(), hs.osk)
+	}
 
 	return nil
 }
@@ -337,6 +341,10 @@ func (hs *handshake) handleEmptyData(e *emptyData) error {
 
 	hs.peer.logger.Debug("Handshake completed")
 
+	for _, h := range hs.server.handlers {
+		h.HandshakeCompleted(hs.peer.PID(), hs.osk)
+	}
+
 	return nil
 }
 
@@ -355,8 +363,7 @@ func (hs *handshake) enterLive(responder bool) {
 		hs.txkt = hs.ck.hash(khResEnc[:])
 	}
 
-	// TODO: Remove key from log
-	hs.peer.logger.Debug("Enter live", slog.Any("osk", khOSK))
+	hs.peer.logger.Debug("Enter live")
 }
 
 func (hs *handshake) mix(data ...[]byte) {
@@ -411,7 +418,7 @@ func (hs *handshake) encapsAndMix(kemAlg string, pk []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	hs.mix(pk, ct, shk)
+	hs.mix(pk, shk, ct)
 
 	return ct, nil
 }
@@ -427,7 +434,7 @@ func (hs *handshake) decapsAndMix(kemAlg string, sk, pk, ct []byte) error {
 		return err
 	}
 
-	hs.mix(pk, ct, shk)
+	hs.mix(pk, shk, ct)
 
 	return nil
 }

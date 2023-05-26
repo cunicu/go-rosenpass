@@ -177,8 +177,8 @@ func (m *respHello) MarshalBinary() []byte {
 		m.sidi[:],
 		m.ecti[:],
 		m.scti[:],
-		m.biscuit[:],
-		m.auth[:])
+		m.auth[:],
+		m.biscuit[:])
 }
 
 func (m *respHello) UnmarshalBinary(buf []byte) (int, error) {
@@ -194,8 +194,8 @@ func (m *respHello) UnmarshalBinary(buf []byte) (int, error) {
 	m.scti = buf[o : o+sctSize]
 	o += sctSize
 
-	o += copy(m.biscuit[:], buf[o:])
 	o += copy(m.auth[:], buf[o:])
+	o += copy(m.biscuit[:], buf[o:])
 
 	return o, nil
 }

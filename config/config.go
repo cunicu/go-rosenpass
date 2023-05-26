@@ -4,12 +4,8 @@
 package config
 
 import (
-	"bytes"
-	"encoding/base64"
-	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -111,7 +107,7 @@ func (f *PeerSection) ToConfig() (pc rosenpass.PeerConfig, err error) {
 	return pc, err
 }
 
-func (c *PeerSection) FromConfigWithPipes(pc rp.PeerConfig, e *exec.Cmd, h rp.HandshakeHandler) (err error) {
+func (c *PeerSection) FromConfigWithPipes(pc rp.PeerConfig, e *exec.Cmd, hs []rp.HandshakeHandler) (err error) {
 	if pc.Endpoint != nil {
 		ep := pc.Endpoint.String()
 		c.Endpoint = &ep
@@ -127,15 +123,15 @@ func (c *PeerSection) FromConfigWithPipes(pc rp.PeerConfig, e *exec.Cmd, h rp.Ha
 		c.PresharedKey = &psk
 	}
 
-	if h != nil {
-		pid := pc.PID()
-		if ko, err := keyoutReader(func(k rp.Key) {
+	pid := pc.PID()
+	if ko, err := keyoutReader(func(k rp.Key) {
+		for _, h := range hs {
 			h.HandshakeCompleted(pid, k)
-		}, e); err != nil {
-			return nil
-		} else {
-			c.KeyOut = &ko
 		}
+	}, e); err != nil {
+		return nil
+	} else {
+		c.KeyOut = &ko
 	}
 
 	return nil
@@ -161,13 +157,33 @@ func (f *File) ToConfig() (c rp.Config, err error) {
 		return c, fmt.Errorf("failed to read public key: %w", err)
 	}
 
+	ch := &exchangeCommandHandler{
+		peers: map[rp.PeerID][]string{},
+	}
+	kh := &keyoutFileHandler{
+		peers: map[rp.PeerID]io.Writer{},
+	}
+
 	for _, p := range f.Peers {
 		if pc, err := p.ToConfig(); err != nil {
 			return c, err
 		} else {
 			c.Peers = append(c.Peers, pc)
+
+			pid := pc.PID()
+
+			// Register peer to handlers
+			if p.KeyOut != nil {
+				kh.addPeerKeyoutFile(pid, *p.KeyOut)
+			}
+
+			if p.ExchangeCommand != nil {
+				ch.addPeerCommand(pid, p.ExchangeCommand)
+			}
 		}
 	}
+
+	c.Handlers = append(c.Handlers, kh)
 
 	return c, nil
 }
@@ -191,7 +207,7 @@ func (f *File) FromConfigWithPipes(c rp.Config, e *exec.Cmd) (err error) {
 
 	for _, pc := range c.Peers {
 		var ps PeerSection
-		if err := ps.FromConfigWithPipes(pc, e, c.Handler); err != nil {
+		if err := ps.FromConfigWithPipes(pc, e, c.Handlers); err != nil {
 			return err
 		} else {
 			f.Peers = append(f.Peers, ps)
@@ -218,101 +234,4 @@ func NewConfigPipe(c rp.Config, e *exec.Cmd) (string, error) {
 	}()
 
 	return fn, nil
-}
-
-func keyoutReader(h func(osk rp.Key), e *exec.Cmd) (string, error) {
-	rd, wr, err := os.Pipe()
-	if err != nil {
-		return "", fmt.Errorf("failed to create pipe: %w", err)
-	}
-
-	go func() {
-		for {
-			buf := make([]byte, 100)
-
-			n, err := rd.Read(buf)
-			if err != nil {
-				if errors.Is(err, io.EOF) {
-					return
-				}
-
-				log.Fatalf("Failed to read key: %s", err)
-			}
-
-			var k rp.Key
-			if n, err := base64.StdEncoding.Decode(k[:], buf[:n]); err != nil {
-				log.Fatalf("Failed to decode key: %s", err)
-			} else if n != 32 {
-				log.Fatalf("Partial read: %d", n)
-			}
-
-			h(k)
-		}
-	}()
-
-	i := len(e.ExtraFiles) + 3
-	e.ExtraFiles = append(e.ExtraFiles, wr)
-
-	return fmt.Sprintf("/dev/fd/%d", i), nil
-}
-
-func bufferedReader(c *exec.Cmd) (string, *bytes.Buffer, error) {
-	fn, rd, err := pipeReader(c)
-	if err != nil {
-		return "", nil, err
-	}
-
-	buf := &bytes.Buffer{}
-
-	go func() {
-		if _, err := io.Copy(buf, rd); err != nil {
-			log.Fatalf("Failed to copy: %s", err)
-		}
-	}()
-
-	return fn, buf, nil
-}
-
-func bufferedWriter(c *exec.Cmd, b []byte) (string, error) {
-	fn, wr, err := pipeWriter(c)
-	if err != nil {
-		return "", err
-	}
-
-	buf := bytes.NewBuffer(b)
-
-	go func() {
-		if _, err := io.Copy(wr, buf); err != nil {
-			log.Fatalf("Failed to copy: %s", err)
-		}
-		if err := wr.Close(); err != nil {
-			log.Fatalf("Failed to close: %s", err)
-		}
-	}()
-
-	return fn, nil
-}
-
-func pipeReader(c *exec.Cmd) (string, io.Reader, error) {
-	rd, wr, err := os.Pipe()
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to create pipe: %w", err)
-	}
-
-	i := len(c.ExtraFiles) + 3
-	c.ExtraFiles = append(c.ExtraFiles, wr)
-
-	return fmt.Sprintf("/dev/fd/%d", i), rd, nil
-}
-
-func pipeWriter(c *exec.Cmd) (string, io.WriteCloser, error) {
-	rd, wr, err := os.Pipe()
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to create pipe: %w", err)
-	}
-
-	i := len(c.ExtraFiles) + 3
-	c.ExtraFiles = append(c.ExtraFiles, rd)
-
-	return fmt.Sprintf("/dev/fd/%d", i), wr, nil
 }

@@ -21,9 +21,6 @@ func (h *handshakeHandler) HandshakeCompleted(pid rp.PeerID, key rp.Key) {
 	h.keys <- key
 }
 
-func (h *handshakeHandler) HandshakeFailed(pid rp.PeerID, err error) {
-}
-
 func TestInteropRust2Rust(t *testing.T) {
 	require := require.New(t)
 
@@ -44,7 +41,7 @@ func TestInteropRust2Rust(t *testing.T) {
 	rp1 := &Rosenpass{
 		Name: "rp1",
 		Config: rp.Config{
-			Handler:   h1,
+			Handlers:  []rp.HandshakeHandler{h1},
 			PublicKey: spk1,
 			SecretKey: ssk1,
 			Listen: &net.UDPAddr{
@@ -57,7 +54,7 @@ func TestInteropRust2Rust(t *testing.T) {
 	rp2 := &Rosenpass{
 		Name: "rp2",
 		Config: rp.Config{
-			Handler:   h2,
+			Handlers:  []rp.HandshakeHandler{h2},
 			PublicKey: spk2,
 			SecretKey: ssk2,
 			Listen: &net.UDPAddr{

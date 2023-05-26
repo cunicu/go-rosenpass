@@ -5,13 +5,11 @@ package rosenpass
 
 import (
 	"crypto/cipher"
-	hmacpkg "crypto/hmac"
 	"crypto/rand"
 	"fmt"
-	"hash"
 
 	"github.com/open-quantum-safe/liboqs-go/oqs"
-	"golang.org/x/crypto/blake2s"
+	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/chacha20poly1305"
 )
 
@@ -19,11 +17,6 @@ const (
 	kemAlgStatic    = "Classic-McEliece-460896"
 	kemAlgEphemeral = "Kyber512"
 )
-
-func blake() hash.Hash {
-	h, _ := blake2s.New256(nil)
-	return h
-}
 
 // Generate a new Classic McEliece key pair
 func GenerateKeyPair() (ssk ssk, spk spk, err error) {
@@ -39,23 +32,36 @@ func GeneratePresharedKey() (psk, error) {
 	}
 }
 
+func blake2(k key, d []byte) key {
+	h, _ := blake2b.New256(k[:])
+	h.Write(d)
+	return key(h.Sum(nil))
+}
+
+func hmac(k key, d []byte) key {
+	var iKey, oKey key
+	for i := range iKey {
+		iKey[i] = k[i] ^ 0x36
+		oKey[i] = k[i] ^ 0x5c
+	}
+
+	outer := blake2(iKey, d)
+	return blake2(oKey, outer[:])
+}
+
 // A keyed hmac function with one 32-byte input, one variable-size input, and one 32-byte output.
 // As keyed hmac function we use the HMAC construction with BLAKE2s as the inner hmac function.
 func (k key) hash(data ...[]byte) key {
 	for _, d := range data {
-		mac := hmacpkg.New(blake, k[:])
-		mac.Write(d)
-		k = key(mac.Sum(nil))
+		k = hmac(k, d)
 	}
-
 	return k
 }
 
 func (k key) mix(data ...[]byte) key {
 	for _, d := range data {
-		k = k.hash(lblMix, d)
+		k = k.hash(khMix[:], d)
 	}
-
 	return k
 }
 

@@ -14,17 +14,16 @@ import (
 
 type HandshakeHandler interface {
 	HandshakeCompleted(pid, key)
-	HandshakeFailed(pid, error)
 }
 
 type Config struct {
-	Listen  *net.UDPAddr
-	Handler HandshakeHandler // TODO: Use any? for API extensibility?
+	Listen *net.UDPAddr
 
 	PublicKey spk
 	SecretKey ssk
 
-	Peers []PeerConfig
+	Peers    []PeerConfig
+	Handlers []HandshakeHandler // TODO: Use any? for API extensibility?
 
 	Conn conn
 
@@ -39,9 +38,9 @@ func (c *Config) PeerConfig() PeerConfig {
 }
 
 type Server struct {
-	spkm    spk
-	sskm    ssk
-	handler HandshakeHandler
+	spkm     spk
+	sskm     ssk
+	handlers []HandshakeHandler
 
 	biscuitKeys []key
 	biscuitCtr  biscuitNo
@@ -66,9 +65,9 @@ func NewUDPServer(cfg Config) (*Server, error) {
 
 func NewServer(cfg Config) (*Server, error) {
 	s := &Server{
-		spkm:    cfg.PublicKey,
-		sskm:    cfg.SecretKey,
-		handler: cfg.Handler,
+		spkm:     cfg.PublicKey,
+		sskm:     cfg.SecretKey,
+		handlers: cfg.Handlers,
 
 		biscuitKeys: []key{},
 
@@ -236,6 +235,8 @@ func (s *Server) handle(pl payload) error {
 	if hs.peer == nil {
 		return fmt.Errorf("missing peer?")
 	}
+
+	s.logger.Debug("Sending message", "type", msgTypeFromPayload(resp))
 
 	return s.conn.Send(resp, hs.peer)
 }

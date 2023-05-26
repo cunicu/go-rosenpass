@@ -12,15 +12,12 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-type handshakeHandler struct {
+type testHandler struct {
 	logger *slog.Logger
 }
 
-func (h *handshakeHandler) HandshakeCompleted(peer pid, osk key) {
+func (h *testHandler) HandshakeCompleted(peer pid, osk key) {
 	h.logger.Debug("Handshake completed", "osk", osk, "peer", peer)
-}
-
-func (h *handshakeHandler) HandshakeFailed(pid, error) {
 }
 
 func TestMain(m *testing.M) {
