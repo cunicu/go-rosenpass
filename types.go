@@ -98,7 +98,6 @@ type (
 	authTag       [authSize]byte // Authentication tag
 	key           [keySize]byte
 	cookie        [cookieSize]byte
-	psk           [pskSize]byte
 	mac           [macSize]byte // Message authentication code
 	nonce         [nonceSize]byte
 	nonceX        [nonceSizeX]byte
@@ -117,7 +116,7 @@ type (
 	// Some aliases for the public API
 	PeerID = pid
 
-	PresharedKey = psk
+	PresharedKey = key
 	PublicKey    = spk
 	SecretKey    = ssk
 	Key          = key

@@ -314,7 +314,7 @@ func (hs *handshake) sendEmptyData() (*emptyData, error) {
 
 	return &emptyData{
 		sid:  hs.sidi,
-		ctr:  [8]byte(n),
+		ctr:  txNonce(n),
 		auth: authTag(auth),
 	}, nil
 }

@@ -24,11 +24,11 @@ func GenerateKeyPair() (ssk ssk, spk spk, err error) {
 }
 
 // Generates a new pre-shared key
-func GeneratePresharedKey() (psk, error) {
+func GeneratePresharedKey() (key, error) {
 	if k, err := generateKey(pskSize); err != nil {
-		return psk{}, err
+		return key{}, err
 	} else {
-		return psk(k), nil
+		return key(k), nil
 	}
 }
 

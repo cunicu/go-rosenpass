@@ -7,8 +7,11 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"testing"
 
+	"github.com/stretchr/testify/require"
 	rp "github.com/stv0g/go-rosenpass"
 	"github.com/stv0g/go-rosenpass/config"
 )
@@ -19,23 +22,37 @@ type Rosenpass struct {
 	rp.Config
 
 	Name string
+	Dir  string
 }
 
-func (rp *Rosenpass) Exchange() (*exec.Cmd, error) {
-	c := exec.Command("cat")
+func (rp *Rosenpass) Exchange(t *testing.T, subDir string) *exec.Cmd {
+	require := require.New(t)
+
+	c := exec.Command(rosenpassExecutable)
 
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 
-	_, err := config.NewConfigPipe(rp.Config, c)
-	if err != nil {
-		return nil, err
+	cfgDir := t.TempDir()
+	if subDir != "" {
+		cfgDir = filepath.Join(cfgDir, subDir)
 	}
 
-	// c.Args = append(c.Args, "exchange-config", fn)
-	c.Args = append(c.Args, "/dev/fd3")
+	err := os.MkdirAll(cfgDir, 0o755)
+	require.NoError(err)
+
+	cfgFile := config.File{}
+	err = cfgFile.FromConfig(rp.Config, cfgDir)
+	require.NoError(err)
+
+	cfgFileName := filepath.Join(cfgDir, "config.toml")
+
+	err = cfgFile.DumpFile(cfgFileName)
+	require.NoError(err)
+
+	c.Args = append(c.Args, "exchange-config", cfgFileName)
 
 	log.Printf("Starting rosenpass %s", strings.Join(c.Args, " "))
 
-	return c, nil
+	return c
 }

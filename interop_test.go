@@ -7,7 +7,9 @@ import (
 	"encoding/base64"
 	"net"
 	"os"
+	"os/exec"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	rp "github.com/stv0g/go-rosenpass"
@@ -70,15 +72,21 @@ func TestInteropRust2Rust(t *testing.T) {
 	rp1.Peers = append(rp1.Peers, pr1)
 	rp2.Peers = append(rp2.Peers, pr2)
 
-	ex1, err := rp1.Exchange()
+	ex1 := rp1.Exchange(t, "1")
 	require.NoError(err)
 
-	ex2, err := rp2.Exchange()
+	ex2 := rp2.Exchange(t, "2")
 	require.NoError(err)
 
-	go ex1.Start()
-	// time.Sleep(500 * time.Millisecond)
-	go ex2.Start()
+	go func() {
+		err := ex1.Start()
+		require.NoError(err)
+	}()
+	time.Sleep(1000 * time.Millisecond)
+	go func() {
+		err := ex2.Start()
+		require.NoError(err)
+	}()
 
 	for i := 0; i < 2; i++ {
 		psk1 := <-h1.keys
@@ -92,6 +100,9 @@ func TestInteropRust2Rust(t *testing.T) {
 	require.NoError(ex1.Process.Signal(os.Interrupt))
 	require.NoError(ex2.Process.Signal(os.Interrupt))
 
-	ex1.Wait()
-	ex2.Wait()
+	err = ex1.Wait()
+	require.NotErrorIs(err, &exec.ExitError{})
+
+	err = ex2.Wait()
+	require.NotErrorIs(err, &exec.ExitError{})
 }

@@ -230,7 +230,7 @@ func (m *initConf) UnmarshalBinary(buf []byte) (int, error) {
 
 type emptyData struct {
 	sid  sid     // Copied from RespHello
-	ctr  [8]byte // Nonce
+	ctr  txNonce // Nonce
 	auth authTag // Empty encrypted message (just an auth tag)
 }
 

@@ -98,7 +98,7 @@ func TestMessages(t *testing.T) {
 		var m2 emptyData
 		m1 := emptyData{
 			sid:  sid(rand(sidSize)),
-			ctr:  [8]byte(rand(8)),
+			ctr:  txNonce(rand(txNonceSize)),
 			auth: authTag(rand(authSize)),
 		}
 

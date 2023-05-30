@@ -8,7 +8,7 @@ import (
 	"io"
 	"net"
 	"os"
-	"os/exec"
+	"path/filepath"
 
 	"github.com/pelletier/go-toml/v2"
 	"github.com/stv0g/go-rosenpass"
@@ -69,7 +69,7 @@ func (f *File) LoadFile(fn string) error {
 }
 
 func (f *File) DumpFile(fn string) error {
-	fh, err := os.OpenFile(fn, os.O_WRONLY|os.O_TRUNC, 0o644)
+	fh, err := os.OpenFile(fn, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to open file: %w", err)
 	}
@@ -107,31 +107,37 @@ func (f *PeerSection) ToConfig() (pc rosenpass.PeerConfig, err error) {
 	return pc, err
 }
 
-func (c *PeerSection) FromConfigWithPipes(pc rp.PeerConfig, e *exec.Cmd, hs []rp.HandshakeHandler) (err error) {
+func (c *PeerSection) FromConfig(pc rp.PeerConfig, dir string, handlers []rp.HandshakeHandler) (err error) {
 	if pc.Endpoint != nil {
 		ep := pc.Endpoint.String()
 		c.Endpoint = &ep
 	}
 
-	if c.PublicKey, err = bufferedWriter(e, pc.PublicKey); err != nil {
+	c.PublicKey = filepath.Join(dir, "public.key")
+	if err := os.WriteFile(c.PublicKey, pc.PublicKey, 0o644); err != nil {
 		return err
 	}
 
-	if psk, err := bufferedWriter(e, pc.PresharedKey[:]); err != nil {
-		return err
-	} else {
-		c.PresharedKey = &psk
-	}
-
-	pid := pc.PID()
-	if ko, err := keyoutReader(func(k rp.Key) {
-		for _, h := range hs {
-			h.HandshakeCompleted(pid, k)
+	zeroKey := rp.PresharedKey{}
+	if pc.PresharedKey != zeroKey {
+		presharedKey := filepath.Join(dir, "preshared.key")
+		if err := os.WriteFile(presharedKey, pc.PresharedKey[:], 0o644); err != nil {
+			return err
 		}
-	}, e); err != nil {
-		return nil
-	} else {
-		c.KeyOut = &ko
+		c.PresharedKey = &presharedKey
+	}
+
+	if len(handlers) > 0 {
+		keyout := filepath.Join(dir, "osk.key")
+		c.KeyOut = &keyout
+
+		if _, err := keyoutWatcher(keyout, func(osk rp.Key) {
+			for _, h := range handlers {
+				h.HandshakeCompleted(pc.PID(), osk)
+			}
+		}); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -174,7 +180,9 @@ func (f *File) ToConfig() (c rp.Config, err error) {
 
 			// Register peer to handlers
 			if p.KeyOut != nil {
-				kh.addPeerKeyoutFile(pid, *p.KeyOut)
+				if err := kh.addPeerKeyoutFile(pid, *p.KeyOut); err != nil {
+					return c, fmt.Errorf("failed to add keyout file: %w", err)
+				}
 			}
 
 			if p.ExchangeCommand != nil {
@@ -188,7 +196,7 @@ func (f *File) ToConfig() (c rp.Config, err error) {
 	return c, nil
 }
 
-func (f *File) FromConfigWithPipes(c rp.Config, e *exec.Cmd) (err error) {
+func (f *File) FromConfig(c rp.Config, dir string) (err error) {
 	f.Verbosity = "Verbose" // TODO: Make configurable
 
 	if c.Listen != nil {
@@ -197,17 +205,24 @@ func (f *File) FromConfigWithPipes(c rp.Config, e *exec.Cmd) (err error) {
 		}
 	}
 
-	if f.PublicKey, err = bufferedWriter(e, c.PublicKey); err != nil {
+	f.PublicKey = filepath.Join(dir, "public.key")
+	if err := os.WriteFile(f.PublicKey, c.PublicKey, 0o644); err != nil {
 		return err
 	}
 
-	if f.SecretKey, err = bufferedWriter(e, c.SecretKey); err != nil {
+	f.SecretKey = filepath.Join(dir, "secret.key")
+	if err := os.WriteFile(f.SecretKey, c.SecretKey, 0o600); err != nil {
 		return err
 	}
 
 	for _, pc := range c.Peers {
+		pDir := filepath.Join(dir, pc.PID().String())
+		if err := os.MkdirAll(pDir, 0o755); err != nil {
+			return err
+		}
+
 		var ps PeerSection
-		if err := ps.FromConfigWithPipes(pc, e, c.Handlers); err != nil {
+		if err := ps.FromConfig(pc, pDir, c.Handlers); err != nil {
 			return err
 		} else {
 			f.Peers = append(f.Peers, ps)
@@ -215,23 +230,4 @@ func (f *File) FromConfigWithPipes(c rp.Config, e *exec.Cmd) (err error) {
 	}
 
 	return nil
-}
-
-func NewConfigPipe(c rp.Config, e *exec.Cmd) (string, error) {
-	var f File
-	if err := f.FromConfigWithPipes(c, e); err != nil {
-		return "", err
-	}
-
-	fn, wr, err := pipeWriter(e)
-	if err != nil {
-		return "", err
-	}
-
-	go func() {
-		f.Dump(wr)
-		wr.Close()
-	}()
-
-	return fn, nil
 }

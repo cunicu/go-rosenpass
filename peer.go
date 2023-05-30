@@ -13,7 +13,7 @@ import (
 
 type PeerConfig struct {
 	PublicKey    spk // The peer’s public key
-	PresharedKey psk // The peer's pre-shared key
+	PresharedKey key // The peer's pre-shared key
 
 	Endpoint *net.UDPAddr // The peers's endpoint
 }
@@ -27,7 +27,7 @@ type peer struct {
 
 	ep   *net.UDPAddr // The peers's endpoint
 	spkt spk          // The peer’s public key
-	psk  psk          // The peer's pre-shared key
+	psk  key          // The peer's pre-shared key
 
 	biscuitUsed biscuitNo // The biscuit_no from the last biscuit accepted for the peer as part of InitConf processing
 
