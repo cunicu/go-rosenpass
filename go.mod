@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/fsnotify/fsnotify v1.6.0
-	github.com/open-quantum-safe/liboqs-go v0.0.0-20230412191424-28be2ce91ace
+	github.com/open-quantum-safe/liboqs-go v0.0.0-20230529163742-562a38987c08
 	github.com/pelletier/go-toml/v2 v2.0.8
 	github.com/spf13/cobra v1.7.0
 	golang.org/x/crypto v0.9.0
