@@ -8,6 +8,8 @@ github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/open-quantum-safe/liboqs-go v0.0.0-20230412191424-28be2ce91ace h1:XsSIn0V/29DEIeGmNjXltb0VMyDSOj1fnyTTZ/P6iSA=
 github.com/open-quantum-safe/liboqs-go v0.0.0-20230412191424-28be2ce91ace/go.mod h1:hL1kCRKHsphcZJgKqdcq74kEYLXMv4hgwfx8YkMxpKE=
+github.com/open-quantum-safe/liboqs-go v0.0.0-20230529163742-562a38987c08 h1:8oufzAnk3TgyKWYYPE8yl5UmjYWUp6Q/O8xcyAbvDjo=
+github.com/open-quantum-safe/liboqs-go v0.0.0-20230529163742-562a38987c08/go.mod h1:hL1kCRKHsphcZJgKqdcq74kEYLXMv4hgwfx8YkMxpKE=
 github.com/pelletier/go-toml/v2 v2.0.8 h1:0ctb6s9mE31h0/lhu+J6OPmVeDxJn+kYnJc2jZR9tGQ=
 github.com/pelletier/go-toml/v2 v2.0.8/go.mod h1:vuYfssBdrU2XDZ9bYydBu6t+6a6PYNcZljzZR9VXg+4=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
