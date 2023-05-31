@@ -93,7 +93,7 @@ func (f *File) ToConfig() (c rp.Config, err error) {
 		peers: map[rp.PeerID][]string{},
 	}
 	kh := &keyoutFileHandler{
-		peers: map[rp.PeerID]io.WriteSeeker{},
+		peers: map[rp.PeerID]string{},
 	}
 
 	for _, p := range f.Peers {

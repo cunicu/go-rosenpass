@@ -1,33 +1,28 @@
 // SPDX-FileCopyrightText: 2023 Steffen Vogel <post@steffenvogel.de>
 // SPDX-License-Identifier: Apache-2.0
 
-package rosenpass
+package rosenpass_test
 
 import (
 	"os"
 	"testing"
+	"time"
 
-	"github.com/open-quantum-safe/liboqs-go/oqs"
-	"github.com/stretchr/testify/require"
+	rp "github.com/stv0g/go-rosenpass"
 	"golang.org/x/exp/slog"
 )
 
 func TestMain(m *testing.M) {
-	textHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+	opts := &slog.HandlerOptions{
 		Level: slog.LevelDebug,
-	})
-	logger := slog.New(textHandler)
+	}
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, opts)))
 
-	slog.SetDefault(logger)
+	// Adjust protocol parameters for tests
+	rp.RekeyAfterTimeResponder = 1 * time.Second
+	rp.RekeyAfterTimeInitiator = rp.RekeyAfterTimeResponder + time.Second
+	rp.RejectAfterTime = 2 * time.Second
+	rp.BiscuitEpoch = 3 * time.Second
 
 	m.Run()
-}
-
-// TestLibOQS verifies that liboqs supports the required
-// KEM algorithms for rosenpass
-func TestLibOQS(t *testing.T) {
-	require := require.New(t)
-
-	require.True(oqs.IsKEMEnabled(kemAlgEphemeral))
-	require.True(oqs.IsKEMEnabled(kemAlgStatic))
 }

@@ -38,7 +38,7 @@ var (
 	khHsEnc                 = khCKE.hash(lblHandshakeEncryption)
 )
 
-const (
+var (
 	// Before Common Era (or more practically: Definitely so old it needs refreshing)
 	//
 	// Using this instead of Timing::MIN or Timing::INFINITY to avoid floating

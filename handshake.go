@@ -38,6 +38,7 @@ type handshake struct {
 
 	role role
 
+	expiryTimer  *time.Timer
 	txTimer      *time.Timer
 	txRetryCount uint
 
@@ -160,18 +161,16 @@ func (hs *handshake) handleInitHello(h *initHello) error {
 		return fmt.Errorf("%w (IHR8): %w", ErrInvalidAuthTag, err)
 	}
 
-	hs.nextMsg = msgTypeInitConf
-
 	return nil
 }
 
 // Step 3
-func (hs *handshake) sendRespHello() (*respHello, error) {
+func (hs *handshake) sendRespHello() error {
 	var err error
 
 	// RHR1: Responder generates a session ID.
 	if hs.sidr, err = generateSessionID(); err != nil {
-		return nil, fmt.Errorf("failed to generate session id (RHR1): %w", err)
+		return fmt.Errorf("failed to generate session id (RHR1): %w", err)
 	}
 
 	// RHR3: Mix both session IDs as part of the protocol transcript.
@@ -180,37 +179,37 @@ func (hs *handshake) sendRespHello() (*respHello, error) {
 	// RHR4: Key encapsulation using the ephemeral key, to provide forward secrecy.
 	ecti, err := hs.encapAndMix(kemAlgEphemeral, hs.epki[:])
 	if err != nil {
-		return nil, fmt.Errorf("failed to encapsulate (RHR4): %w", err)
+		return fmt.Errorf("failed to encapsulate (RHR4): %w", err)
 	}
 
 	// RHR5: Key encapsulation using the initiator’s static key, to authenticate the
 	//       initiator, and non-forward-secret confidentiality.
 	scti, err := hs.encapAndMix(kemAlgStatic, hs.peer.spkt[:])
 	if err != nil {
-		return nil, fmt.Errorf("failed to encapsulate (RHR5): %w", err)
+		return fmt.Errorf("failed to encapsulate (RHR5): %w", err)
 	}
 
 	// RHR6: The responder transmits their state to the initiator in an encrypted container
 	//       to avoid having to store state.
 	biscuit, err := hs.storeBiscuit()
 	if err != nil {
-		return nil, fmt.Errorf("failed to store biscuit (RHR6): %w", err)
+		return fmt.Errorf("failed to store biscuit (RHR6): %w", err)
 	}
 
 	// RHR7: Add a message authentication code for the same reason as above.
 	auth, err := hs.encryptAndMix([]byte{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt and mix (RHR7): %w", err)
+		return fmt.Errorf("failed to encrypt and mix (RHR7): %w", err)
 	}
 
-	return &respHello{
+	return hs.send(&respHello{
 		sidr:    hs.sidr,
 		sidi:    hs.sidi,
 		ecti:    ect(ecti),
 		scti:    sct(scti),
 		biscuit: biscuit,
 		auth:    authTag(auth),
-	}, nil
+	})
 }
 
 // Step 4
@@ -245,13 +244,11 @@ func (hs *handshake) handleRespHello(r *respHello) error {
 		return fmt.Errorf("%w (RHI7): %w", ErrInvalidAuthTag, err)
 	}
 
-	hs.txTimer.Stop()
-
 	return nil
 }
 
 // Step 5
-func (hs *handshake) sendInitConf() (*initConf, error) {
+func (hs *handshake) sendInitConf() error {
 	// ICI3: Mix both session IDs as part of the protocol transcript.
 	hs.mix(hs.sidi[:], hs.sidr[:])
 
@@ -259,18 +256,18 @@ func (hs *handshake) sendInitConf() (*initConf, error) {
 	//       ensures that both participants agree on the final chaining key.
 	auth, err := hs.encryptAndMix([]byte{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create authentication tag (ICI4): %w", err)
+		return fmt.Errorf("failed to create authentication tag (ICI4): %w", err)
 	}
 
 	// ICI7: Derive the transmission keys, and the output shared key for use as WireGuard’s PSK.
 	hs.enterLive()
 
-	return &initConf{
+	return hs.send(&initConf{
 		sidi:    hs.sidi,
 		sidr:    hs.sidr,
 		biscuit: hs.biscuit,
 		auth:    authTag(auth),
-	}, nil
+	})
 }
 
 // Step 6
@@ -314,17 +311,11 @@ func (hs *handshake) handleInitConf(i *initConf) error {
 	// ICR7: Derive the transmission keys, and the output shared key for use as WireGuard’s PSK.
 	hs.enterLive()
 
-	hs.peer.logger.Debug("Handshake completed")
-
-	for _, h := range hs.server.handlers {
-		h.HandshakeCompleted(hs.peer.PID(), hs.osk)
-	}
-
 	return nil
 }
 
 // Step 7
-func (hs *handshake) sendEmptyData() (*emptyData, error) {
+func (hs *handshake) sendEmptyData() error {
 	hs.txnm++
 
 	n := make([]byte, nonceSize)
@@ -332,16 +323,16 @@ func (hs *handshake) sendEmptyData() (*emptyData, error) {
 
 	aead, err := newAEAD(hs.txkm)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	auth := aead.Seal(nil, n, []byte{}, []byte{})
 
-	return &emptyData{
+	return hs.send(&emptyData{
 		sid:  hs.sidi,
 		ctr:  txNonce(n),
 		auth: authTag(auth),
-	}, nil
+	})
 }
 
 // Step 8
@@ -363,14 +354,6 @@ func (hs *handshake) handleEmptyData(e *emptyData) error {
 	if _, err := aead.Open(nil, n, e.auth[:], []byte{}); err != nil {
 		return ErrInvalidAuthTag
 	}
-
-	hs.peer.logger.Debug("Handshake completed")
-
-	for _, h := range hs.server.handlers {
-		h.HandshakeCompleted(hs.peer.PID(), hs.osk)
-	}
-
-	hs.txTimer.Stop()
 
 	return nil
 }

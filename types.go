@@ -18,6 +18,8 @@ const (
 	msgTypeRespHello
 	msgTypeInitConf
 	msgTypeEmptyData
+	msgTypeData
+	msgTypeCookieReply
 )
 
 func (t msgType) String() string {

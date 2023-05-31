@@ -75,8 +75,6 @@ func (s *udpConn) Receive(spkm spk) (payload, *net.UDPAddr, error) {
 		return nil, nil, fmt.Errorf("failed to read: %w", err)
 	}
 
-	s.logger.Info("Received message", slog.Int("len", n), slog.Any("from", from))
-
 	e := &envelope{}
 	if m, err := e.CheckAndUnmarshalBinary(buf[:n], spkm); err != nil {
 		return nil, nil, fmt.Errorf("received malformed packet: %w", err)

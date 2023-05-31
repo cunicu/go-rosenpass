@@ -18,38 +18,44 @@ import (
 )
 
 type handshakeHandler struct {
-	keys chan rp.Key
+	keys    chan rp.Key
+	expired chan rp.PeerID
 }
 
 func (h *handshakeHandler) HandshakeCompleted(pid rp.PeerID, key rp.Key) {
 	h.keys <- key
 }
 
+func (h *handshakeHandler) HandshakeExpired(pid rp.PeerID) {
+	h.expired <- pid
+}
+
 func TestServer(t *testing.T) {
-	run := func(t *testing.T, newGoServer, newRustServer func(*testing.T, string, rp.Config) (test.Server, error)) {
-		testHandshake(t, newGoServer, newGoServer)
+	run := func(t *testing.T, newGoServer, newRustServer func(*testing.T, string, rp.Config) (test.Server, error), numHandshakes int) {
+		t.Run("Go-to-Go", func(t *testing.T) {
+			testHandshake(t, newGoServer, newGoServer, numHandshakes)
+		})
 
-		t.Run("interop", func(t *testing.T) {
-			t.Run("Rust to Go", func(t *testing.T) {
-				testHandshake(t, newRustServer, newGoServer)
-			})
+		t.Run("Rust-to-Go", func(t *testing.T) {
+			testHandshake(t, newRustServer, newGoServer, numHandshakes)
+		})
 
-			t.Run("Go to Rust", func(t *testing.T) {
-				testHandshake(t, newGoServer, newRustServer)
-			})
+		t.Run("Go-to-Rust", func(t *testing.T) {
+			testHandshake(t, newGoServer, newRustServer, numHandshakes)
 		})
 	}
 
-	t.Run("Rust", func(t *testing.T) {
-		testHandshake(t, newStandaloneRustServer, newStandaloneRustServer)
+	t.Run("Rust-to-Rust", func(t *testing.T) {
+		// We only perform a single handshake as the tests should not wait for the hardcoded rekey timeout
+		testHandshake(t, newStandaloneRustServer, newStandaloneRustServer, 1)
 	})
 
-	t.Run("in-process", func(t *testing.T) {
-		run(t, newGoServer, newStandaloneRustServer)
+	t.Run("In-process", func(t *testing.T) {
+		run(t, newGoServer, newStandaloneRustServer, 4)
 	})
 
-	t.Run("standalone", func(t *testing.T) {
-		run(t, newStandaloneGoServer, newStandaloneRustServer)
+	t.Run("Standalone", func(t *testing.T) {
+		run(t, newStandaloneGoServer, newStandaloneRustServer, 1)
 	})
 }
 
@@ -75,7 +81,7 @@ func newStandaloneRustServer(t *testing.T, name string, cfg rp.Config) (test.Ser
 	return test.NewStandaloneServer(cfg, "rosenpass", dir)
 }
 
-func testHandshake(t *testing.T, newAlice, newBob func(*testing.T, string, rp.Config) (test.Server, error)) {
+func testHandshake(t *testing.T, newAlice, newBob func(*testing.T, string, rp.Config) (test.Server, error), numHandshakes int) {
 	require := require.New(t)
 
 	// Generate keys
@@ -90,11 +96,13 @@ func testHandshake(t *testing.T, newAlice, newBob func(*testing.T, string, rp.Co
 
 	// Generate configurations
 	handlerAlice := &handshakeHandler{
-		keys: make(chan rp.Key, 2),
+		keys:    make(chan rp.Key, 16),
+		expired: make(chan rp.PeerID, 16),
 	}
 
 	handlerBob := &handshakeHandler{
-		keys: make(chan rp.Key, 2),
+		keys:    make(chan rp.Key, 16),
+		expired: make(chan rp.PeerID, 16),
 	}
 
 	portAlice := int(1024 + rand.Int31n(math.MaxUint16-1024))
@@ -116,7 +124,7 @@ func testHandshake(t *testing.T, newAlice, newBob func(*testing.T, string, rp.Co
 				},
 			},
 		},
-		Handlers: []rp.HandshakeHandler{
+		Handlers: []rp.Handler{
 			handlerAlice,
 		},
 	}
@@ -135,7 +143,7 @@ func testHandshake(t *testing.T, newAlice, newBob func(*testing.T, string, rp.Co
 				// so we dont specify and endpoint for Alice
 			},
 		},
-		Handlers: []rp.HandshakeHandler{
+		Handlers: []rp.Handler{
 			handlerBob,
 		},
 	}
@@ -156,7 +164,7 @@ func testHandshake(t *testing.T, newAlice, newBob func(*testing.T, string, rp.Co
 	err = svrBob.Run()
 	require.NoError(err)
 
-	for i := 0; i < 1; i++ {
+	for i := 0; i < numHandshakes; i++ {
 		oskAlice := <-handlerAlice.keys
 		oskBob := <-handlerBob.keys
 
@@ -165,6 +173,17 @@ func testHandshake(t *testing.T, newAlice, newBob func(*testing.T, string, rp.Co
 		t.Logf("OSK: %s\n", base64.StdEncoding.EncodeToString(oskAlice[:]))
 	}
 
-	require.NoError(svrAlice.Close())
-	require.NoError(svrBob.Close())
+	// HandshakeExpiredHandlers are only supported for non-standalone servers
+	if _, ok := svrAlice.(*rp.Server); ok {
+		err = svrBob.Close()
+		require.NoError(err)
+
+		expired := <-handlerAlice.expired
+		require.Equal(expired, cfgAlice.Peers[0].PID())
+
+		require.NoError(svrAlice.Close())
+	} else {
+		require.NoError(svrAlice.Close())
+		require.NoError(svrBob.Close())
+	}
 }

@@ -7,9 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"time"
 
 	"golang.org/x/exp/slog"
 )
+
+var ErrMissingEndpoint = errors.New("missing endpoint")
 
 type PeerConfig struct {
 	PublicKey    spk // The peer’s public key
@@ -24,6 +27,8 @@ func (p *PeerConfig) PID() pid {
 
 type peer struct {
 	server *Server
+
+	rekeyTimer *time.Timer
 
 	initialEndpoint *net.UDPAddr // The peers's endpoint as configured
 	endpoint        *net.UDPAddr // The peers's endpoint as learned from its last packet
@@ -59,10 +64,9 @@ func (p *peer) PID() pid {
 	return pid(khPeerID.hash(p.spkt[:]))
 }
 
-func (p *peer) Run() error {
-	if p.initialEndpoint == nil {
-		p.logger.Debug("Skipping peer without endpoint")
-		return nil
+func (p *peer) initiateHandshake() (*handshake, error) {
+	if p.endpoint == nil {
+		return nil, ErrMissingEndpoint
 	}
 
 	hs := &handshake{
@@ -73,15 +77,14 @@ func (p *peer) Run() error {
 
 	m, err := hs.sendInitHello()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := hs.send(m); err != nil {
-		return fmt.Errorf("failed to send: %w", err)
+		return nil, fmt.Errorf("failed to send: %w", err)
 	}
 
-	p.server.handshakes[hs.sidi] = hs
 	p.logger.Debug("Started new handshake", "sidi", hs.sidi)
 
-	return nil
+	return hs, nil
 }

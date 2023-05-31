@@ -55,7 +55,7 @@ func (f *PeerSection) ToConfig() (pc rosenpass.PeerConfig, err error) {
 	return pc, err
 }
 
-func (c *PeerSection) FromConfig(pc rp.PeerConfig, dir string, handlers []rp.HandshakeHandler) (err error) {
+func (c *PeerSection) FromConfig(pc rp.PeerConfig, dir string, handlers []rp.Handler) (err error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("failed to create dir: %w", err)
 	}
@@ -85,7 +85,9 @@ func (c *PeerSection) FromConfig(pc rp.PeerConfig, dir string, handlers []rp.Han
 
 		if _, err := keyoutWatcher(keyout, func(osk rp.Key) {
 			for _, h := range handlers {
-				h.HandshakeCompleted(pc.PID(), osk)
+				if h, ok := h.(rp.HandshakeCompletedHandler); ok {
+					h.HandshakeCompleted(pc.PID(), osk)
+				}
 			}
 		}); err != nil {
 			return err

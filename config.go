@@ -16,7 +16,7 @@ type Config struct {
 	SecretKey ssk
 
 	Peers    []PeerConfig
-	Handlers []HandshakeHandler // TODO: Use any? for API extensibility?
+	Handlers []Handler
 
 	Conn conn
 

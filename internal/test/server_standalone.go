@@ -50,7 +50,7 @@ func NewStandaloneServer(cfg rp.Config, executable, dir string) (*StandaloneServ
 }
 
 func (s *StandaloneServer) Run() error {
-	log.Printf("Starting rosenpass %s", strings.Join(s.cmd.Args, " "))
+	log.Printf("Starting %s", strings.Join(s.cmd.Args, " "))
 
 	return s.cmd.Start()
 }
