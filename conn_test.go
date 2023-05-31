@@ -18,8 +18,8 @@ func TestUDPConn(t *testing.T) {
 
 	p := &peer{
 		spkt: spk,
-		initialEndpoint: &net.UDPAddr{
-			IP:   net.ParseIP("127.0.0.1"),
+		endpoint: &net.UDPAddr{
+			IP:   net.IPv6loopback,
 			Port: 1234,
 		},
 	}
