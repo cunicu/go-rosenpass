@@ -5,7 +5,6 @@ package rosenpass_test
 
 import (
 	"encoding/base64"
-	"fmt"
 	"math"
 	"math/rand"
 	"net"
@@ -61,16 +60,11 @@ func newGoServer(t *testing.T, name string, cfg rp.Config) (test.Server, error) 
 }
 
 func newStandaloneGoServer(t *testing.T, name string, cfg rp.Config) (test.Server, error) {
-	executable, err := test.EnsureBuild(t)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build go-rosenpass: %w", err)
-	}
-
 	dir := filepath.Join(t.TempDir(), name)
 
 	cfg.Logger = slog.Default().With("node", name)
 
-	return test.NewStandaloneServer(cfg, executable, dir)
+	return test.NewStandaloneGoServer(cfg, dir)
 }
 
 func newStandaloneRustServer(t *testing.T, name string, cfg rp.Config) (test.Server, error) {

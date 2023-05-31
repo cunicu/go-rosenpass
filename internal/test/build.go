@@ -6,18 +6,21 @@ package test
 import (
 	"os"
 	"os/exec"
-	"path/filepath"
-	"testing"
 )
 
 var executable string
 
-func EnsureBuild(t *testing.T) (string, error) {
+func EnsureBuild(coverPkg string) (string, error) {
 	if executable == "" {
-		outputDir := t.TempDir()
-		output := filepath.Join(outputDir, "go-rosenpass")
+		output := "./go-rosenpass"
 
-		c := exec.Command("go", "build", "-o", output, "./cmd")
+		c := exec.Command("go", "build", "-o", output)
+
+		if coverPkg != "" {
+			c.Args = append(c.Args, "-coverpkg", coverPkg)
+		}
+
+		c.Args = append(c.Args, "./cmd")
 		c.Stderr = os.Stderr
 		c.Stdout = os.Stdout
 
