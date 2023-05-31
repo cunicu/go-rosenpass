@@ -10,9 +10,15 @@ import (
 	"golang.org/x/exp/slog"
 )
 
+//nolint:unused
+type endpoint interface {
+	String() string
+	Equal(endpoint) bool
+}
+
 type conn interface {
 	Send(pl payload, p *peer) error
-	Receive(spkm spk) (payload, error)
+	Receive(spkm spk) (payload, *net.UDPAddr, error)
 	Close() error
 }
 
@@ -51,7 +57,7 @@ func (s *udpConn) Send(pl payload, p *peer) error {
 	}
 
 	buf := e.MarshalBinaryAndSeal(p.spkt)
-	if n, err := s.conn.WriteToUDP(buf, p.ep); err != nil {
+	if n, err := s.conn.WriteToUDP(buf, p.endpoint); err != nil {
 		return err
 	} else if n != len(buf) {
 		return fmt.Errorf("partial write")
@@ -60,27 +66,39 @@ func (s *udpConn) Send(pl payload, p *peer) error {
 	return nil
 }
 
-func (s *udpConn) Receive(spkm spk) (payload, error) {
+func (s *udpConn) Receive(spkm spk) (payload, *net.UDPAddr, error) {
 	// TODO: Check for appropriate MTU
 	buf := make([]byte, 1500)
 
 	n, from, err := s.conn.ReadFromUDP(buf)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read: %w", err)
+		return nil, nil, fmt.Errorf("failed to read: %w", err)
 	}
 
 	s.logger.Info("Received message", slog.Int("len", n), slog.Any("from", from))
 
 	e := &envelope{}
 	if m, err := e.CheckAndUnmarshalBinary(buf[:n], spkm); err != nil {
-		return nil, fmt.Errorf("received malformed packet: %w", err)
+		return nil, nil, fmt.Errorf("received malformed packet: %w", err)
 	} else if m != n {
-		return nil, fmt.Errorf("parsed partial packet")
+		return nil, nil, fmt.Errorf("parsed partial packet")
 	}
 
-	return e.payload, nil
+	return e.payload, from, nil
 }
 
 func (s *udpConn) Close() error {
 	return s.conn.Close()
+}
+
+func compareAddr(a, b *net.UDPAddr) bool {
+	if !a.IP.Equal(b.IP) {
+		return false
+	}
+
+	if a.Port != b.Port {
+		return false
+	}
+
+	return true
 }

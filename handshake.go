@@ -7,6 +7,11 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
+	"math/rand"
+	"time"
+
+	"golang.org/x/exp/slog"
 )
 
 var (
@@ -18,9 +23,18 @@ var (
 	ErrStaleNonce        = errors.New("stale nonce")
 )
 
+type role int
+
+const (
+	responder role = iota
+	initiator
+)
+
 type handshake struct {
 	server *Server
 	peer   *peer
+
+	role role
 
 	nextMsg msgType // The type of the next expected message
 
@@ -37,6 +51,10 @@ type handshake struct {
 	txkm key // My transmission key
 	txkt key // Their transmission key
 	osk  key // Output shared key
+
+	txPayload    payload
+	txTimer      *time.Timer
+	txRetryCount uint
 
 	biscuit sealedBiscuit
 }
@@ -66,7 +84,7 @@ func (hs *handshake) sendInitHello() (*initHello, error) {
 
 	// IHI5: Key encapsulation using the responder’s public key. Mixes public key, shared
 	//       secret, and ciphertext into the chaining key, and authenticates the responder.
-	sctr, err := hs.encapsAndMix(kemAlgStatic, hs.peer.spkt[:])
+	sctr, err := hs.encapAndMix(kemAlgStatic, hs.peer.spkt[:])
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +133,7 @@ func (hs *handshake) handleInitHello(h *initHello) error {
 
 	// IHR5: Key encapsulation using the responder’s public key. Mixes public key, shared
 	//       secret, and ciphertext into the chaining key, and authenticates the responder.
-	err := hs.decapsAndMix(kemAlgStatic, hs.server.sskm[:], hs.server.spkm[:], h.sctr[:])
+	err := hs.decapAndMix(kemAlgStatic, hs.server.sskm[:], hs.server.spkm[:], h.sctr[:])
 	if err != nil {
 		return fmt.Errorf("failed to decapsulate (IHR5): %w", err)
 	}
@@ -159,14 +177,14 @@ func (hs *handshake) sendRespHello() (*respHello, error) {
 	hs.mix(hs.sidr[:], hs.sidi[:])
 
 	// RHR4: Key encapsulation using the ephemeral key, to provide forward secrecy.
-	ecti, err := hs.encapsAndMix(kemAlgEphemeral, hs.epki[:])
+	ecti, err := hs.encapAndMix(kemAlgEphemeral, hs.epki[:])
 	if err != nil {
 		return nil, fmt.Errorf("failed to encapsulate (RHR4): %w", err)
 	}
 
 	// RHR5: Key encapsulation using the initiator’s static key, to authenticate the
 	//       initiator, and non-forward-secret confidentiality.
-	scti, err := hs.encapsAndMix(kemAlgStatic, hs.peer.spkt[:])
+	scti, err := hs.encapAndMix(kemAlgStatic, hs.peer.spkt[:])
 	if err != nil {
 		return nil, fmt.Errorf("failed to encapsulate (RHR5): %w", err)
 	}
@@ -204,16 +222,16 @@ func (hs *handshake) handleRespHello(r *respHello) error {
 
 	// RHI3: Mix both session IDs as part of the protocol transcript.
 	// TODO: Take local or exchanged ones?
-	hs.mix(r.sidr[:], r.sidi[:])
+	hs.mix(hs.sidr[:], hs.sidi[:])
 
 	// RHI4: Key encapsulation using the ephemeral key, to provide forward secrecy.
-	if err := hs.decapsAndMix(kemAlgEphemeral, hs.eski[:], hs.epki[:], r.ecti[:]); err != nil {
+	if err := hs.decapAndMix(kemAlgEphemeral, hs.eski[:], hs.epki[:], r.ecti[:]); err != nil {
 		return fmt.Errorf("failed to decapsulate (RHI4): %w", err)
 	}
 
 	// RHI5: Key encapsulation using the initiator’s static key, to authenticate the
 	//       initiator, and non-forward-secret confidentiality.
-	if err := hs.decapsAndMix(kemAlgStatic, hs.server.sskm[:], hs.server.spkm[:], r.scti[:]); err != nil {
+	if err := hs.decapAndMix(kemAlgStatic, hs.server.sskm[:], hs.server.spkm[:], r.scti[:]); err != nil {
 		return fmt.Errorf("failed to decapsulate (RHI5): %w", err)
 	}
 
@@ -242,7 +260,7 @@ func (hs *handshake) sendInitConf() (*initConf, error) {
 	}
 
 	// ICI7: Derive the transmission keys, and the output shared key for use as WireGuard’s PSK.
-	hs.enterLive(false)
+	hs.enterLive()
 
 	return &initConf{
 		sidi:    hs.sidi,
@@ -287,7 +305,7 @@ func (hs *handshake) handleInitConf(i *initConf) error {
 	hs.peer.biscuitUsed = bNo
 
 	// ICR7: Derive the transmission keys, and the output shared key for use as WireGuard’s PSK.
-	hs.enterLive(true)
+	hs.enterLive()
 
 	hs.peer.logger.Debug("Handshake completed")
 
@@ -350,12 +368,12 @@ func (hs *handshake) handleEmptyData(e *emptyData) error {
 
 // Helpers
 
-func (hs *handshake) enterLive(responder bool) {
+func (hs *handshake) enterLive() {
 	hs.txnm = 0
 	hs.txnt = 0
 	hs.osk = hs.ck.hash(khOSK[:])
 
-	if responder {
+	if hs.role == responder {
 		hs.txkm = hs.ck.hash(khResEnc[:])
 		hs.txkt = hs.ck.hash(khIniEnc[:])
 	} else {
@@ -407,7 +425,7 @@ func (hs *handshake) decryptAndMix(ct []byte) ([]byte, error) {
 	return pt, nil
 }
 
-func (hs *handshake) encapsAndMix(kemAlg string, pk []byte) ([]byte, error) {
+func (hs *handshake) encapAndMix(kemAlg string, pk []byte) ([]byte, error) {
 	kem, err := newKEM(kemAlg, pk)
 	if err != nil {
 		return nil, err
@@ -423,7 +441,7 @@ func (hs *handshake) encapsAndMix(kemAlg string, pk []byte) ([]byte, error) {
 	return ct, nil
 }
 
-func (hs *handshake) decapsAndMix(kemAlg string, sk, pk, ct []byte) error {
+func (hs *handshake) decapAndMix(kemAlg string, sk, pk, ct []byte) error {
 	kem, err := newKEM(kemAlg, sk)
 	if err != nil {
 		return err
@@ -511,4 +529,44 @@ func (hs *handshake) loadBiscuit(sb sealedBiscuit) (biscuitNo, error) {
 	// so the handshake code can differentiate
 	// retransmission requests and first time handshake completion
 	return b.biscuitNo, nil
+}
+
+// Retransmission
+
+func (hs *handshake) scheduleRetransmission() {
+	after := RetransmitDelayBegin
+
+	after += time.Duration(math.Pow(RetransmitDelayGrowth, float64(hs.txRetryCount)))
+	if after > RetransmitDelayEnd {
+		after = RetransmitDelayEnd
+	}
+
+	after += time.Duration((2*rand.Float64() - 1) * float64(RetransmitDelayJitter))
+
+	hs.txTimer = time.AfterFunc(after, func() {
+		hs.txRetryCount++
+
+		if err := hs.send(hs.txPayload); err != nil {
+			hs.peer.logger.Error("Failed to send", slog.Any("error", err))
+		}
+	})
+}
+
+func (hs *handshake) send(pl payload) error {
+	hs.peer.logger.Debug("Sending message", "type", msgTypeFromPayload(pl))
+
+	if hs.txTimer != nil {
+		hs.txTimer.Stop()
+	}
+
+	hs.txPayload = pl
+	hs.txRetryCount = 0
+
+	switch pl.(type) {
+	// Only InitHello and InitConf messages are retransmitted
+	case *initHello, *initConf:
+		hs.scheduleRetransmission()
+	}
+
+	return hs.server.conn.Send(pl, hs.peer)
 }

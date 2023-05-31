@@ -25,9 +25,11 @@ func (p *PeerConfig) PID() pid {
 type peer struct {
 	server *Server
 
-	ep   *net.UDPAddr // The peers's endpoint
-	spkt spk          // The peer’s public key
-	psk  key          // The peer's pre-shared key
+	initialEndpoint *net.UDPAddr // The peers's endpoint as configured
+	endpoint        *net.UDPAddr // The peers's endpoint as learned from its last packet
+
+	spkt spk // The peer’s public key
+	psk  key // The peer's pre-shared key
 
 	biscuitUsed biscuitNo // The biscuit_no from the last biscuit accepted for the peer as part of InitConf processing
 
@@ -42,8 +44,10 @@ func (s *Server) newPeer(cfg *PeerConfig) (*peer, error) {
 	p := &peer{
 		server: s,
 
-		ep:   cfg.Endpoint,
-		spkt: cfg.PublicKey,
+		initialEndpoint: cfg.Endpoint,
+		endpoint:        cfg.Endpoint,
+		spkt:            cfg.PublicKey,
+		psk:             cfg.PresharedKey,
 	}
 
 	p.logger = s.logger.With(slog.Any("pid", p.PID()))
@@ -56,7 +60,7 @@ func (p *peer) PID() pid {
 }
 
 func (p *peer) Run() error {
-	if p.ep == nil {
+	if p.initialEndpoint == nil {
 		p.logger.Debug("Skipping peer without endpoint")
 		return nil
 	}
@@ -64,6 +68,7 @@ func (p *peer) Run() error {
 	hs := &handshake{
 		peer:   p,
 		server: p.server,
+		role:   initiator,
 	}
 
 	m, err := hs.sendInitHello()
@@ -71,7 +76,7 @@ func (p *peer) Run() error {
 		return err
 	}
 
-	if err := p.server.conn.Send(m, p); err != nil {
+	if err := hs.send(m); err != nil {
 		return fmt.Errorf("failed to send: %w", err)
 	}
 

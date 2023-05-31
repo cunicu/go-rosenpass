@@ -18,7 +18,7 @@ func TestUDPConn(t *testing.T) {
 
 	p := &peer{
 		spkt: spk,
-		ep: &net.UDPAddr{
+		initialEndpoint: &net.UDPAddr{
 			IP:   net.ParseIP("127.0.0.1"),
 			Port: 1234,
 		},
@@ -34,7 +34,7 @@ func TestUDPConn(t *testing.T) {
 
 	pls := make(chan payload)
 	go func() {
-		pl, err := c.Receive(spk)
+		pl, _, err := c.Receive(spk)
 		require.NoError(err)
 
 		pls <- pl

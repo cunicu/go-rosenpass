@@ -11,25 +11,9 @@ import (
 	"path/filepath"
 
 	"github.com/pelletier/go-toml/v2"
-	"github.com/stv0g/go-rosenpass"
 	rp "github.com/stv0g/go-rosenpass"
 	"golang.org/x/exp/slog"
 )
-
-type PeerSection struct {
-	// The peer’s public key
-	PublicKey string `toml:"public_key"`
-
-	// The peers's endpoint
-	Endpoint *string `toml:"endpoint"`
-
-	// The peer's pre-shared key
-	PresharedKey *string `toml:"pre_shared_key"`
-
-	KeyOut *string `toml:"key_out"`
-
-	ExchangeCommand []string `toml:"exchange_command,multiline,omitempty"`
-}
 
 type File struct {
 	PublicKey string `toml:"public_key"`
@@ -80,64 +64,6 @@ func (f *File) DumpFile(fn string) error {
 
 	if err := fh.Close(); err != nil {
 		return fmt.Errorf("failed to close file: %w", err)
-	}
-
-	return nil
-}
-
-func (f *PeerSection) ToConfig() (pc rosenpass.PeerConfig, err error) {
-	if pc.PublicKey, err = os.ReadFile(f.PublicKey); err != nil {
-		return pc, fmt.Errorf("failed to read public key: %w", err)
-	}
-
-	if f.PresharedKey != nil {
-		if k, err := os.ReadFile(*f.PresharedKey); err != nil {
-			return pc, fmt.Errorf("failed to read public key: %w", err)
-		} else {
-			pc.PresharedKey = rp.PresharedKey(k)
-		}
-	}
-
-	if f.Endpoint != nil {
-		if pc.Endpoint, err = net.ResolveUDPAddr("udp", *f.Endpoint); err != nil {
-			return pc, fmt.Errorf("failed to resolve listen address: %w", err)
-		}
-	}
-
-	return pc, err
-}
-
-func (c *PeerSection) FromConfig(pc rp.PeerConfig, dir string, handlers []rp.HandshakeHandler) (err error) {
-	if pc.Endpoint != nil {
-		ep := pc.Endpoint.String()
-		c.Endpoint = &ep
-	}
-
-	c.PublicKey = filepath.Join(dir, "public.key")
-	if err := os.WriteFile(c.PublicKey, pc.PublicKey, 0o644); err != nil {
-		return err
-	}
-
-	zeroKey := rp.PresharedKey{}
-	if pc.PresharedKey != zeroKey {
-		presharedKey := filepath.Join(dir, "preshared.key")
-		if err := os.WriteFile(presharedKey, pc.PresharedKey[:], 0o644); err != nil {
-			return err
-		}
-		c.PresharedKey = &presharedKey
-	}
-
-	if len(handlers) > 0 {
-		keyout := filepath.Join(dir, "osk.key")
-		c.KeyOut = &keyout
-
-		if _, err := keyoutWatcher(keyout, func(osk rp.Key) {
-			for _, h := range handlers {
-				h.HandshakeCompleted(pc.PID(), osk)
-			}
-		}); err != nil {
-			return err
-		}
 	}
 
 	return nil

@@ -3,5 +3,32 @@
 {
     "go.testFlags": [
         "-v"
+    ],
+    "cSpell.words": [
+        "ciphertext",
+        "decap",
+        "decaps",
+        "ecti",
+        "encap",
+        "encaps",
+        "epki",
+        "eski",
+        "pidi",
+        "Preshared",
+        "scti",
+        "sctr",
+        "sidi",
+        "sidr",
+        "spki",
+        "spkm",
+        "spkr",
+        "spkt",
+        "sskm",
+        "txkm",
+        "txkt",
+        "txnm",
+        "txnt",
+        "xaead",
+        "XAEAD"
     ]
 }

@@ -16,27 +16,6 @@ type HandshakeHandler interface {
 	HandshakeCompleted(pid, key)
 }
 
-type Config struct {
-	Listen *net.UDPAddr
-
-	PublicKey spk
-	SecretKey ssk
-
-	Peers    []PeerConfig
-	Handlers []HandshakeHandler // TODO: Use any? for API extensibility?
-
-	Conn conn
-
-	Logger *slog.Logger
-}
-
-func (c *Config) PeerConfig() PeerConfig {
-	return PeerConfig{
-		PublicKey: c.PublicKey,
-		Endpoint:  c.Listen,
-	}
-}
-
 type Server struct {
 	spkm     spk
 	sskm     ssk
@@ -91,8 +70,8 @@ func NewServer(cfg Config) (*Server, error) {
 		key(biscuitKey),
 	}
 
-	for _, pcfg := range cfg.Peers {
-		p, err := s.newPeer(&pcfg)
+	for _, pCfg := range cfg.Peers {
+		p, err := s.newPeer(&pCfg)
 		if err != nil {
 			return nil, err
 		}
@@ -133,7 +112,7 @@ func (s *Server) Run() error {
 
 func (s *Server) receiveLoop() {
 	for {
-		pl, err := s.conn.Receive(s.spkm)
+		pl, from, err := s.conn.Receive(s.spkm)
 		if err != nil {
 			if errors.Is(err, net.ErrClosed) {
 				s.logger.Error("Connection closed")
@@ -144,14 +123,14 @@ func (s *Server) receiveLoop() {
 			continue
 		}
 
-		if err := s.handle(pl); err != nil {
+		if err := s.handle(pl, from); err != nil {
 			s.logger.Error("Failed to handle message", "error", err)
 			continue
 		}
 	}
 }
 
-func (s *Server) handle(pl payload) error {
+func (s *Server) handle(pl payload, from *net.UDPAddr) error {
 	var resp payload
 	var hs *handshake
 	var ok bool
@@ -167,6 +146,7 @@ func (s *Server) handle(pl payload) error {
 		hs = &handshake{
 			server:  s,
 			nextMsg: mTyp,
+			role:    responder,
 		}
 
 	case *respHello:
@@ -192,6 +172,13 @@ func (s *Server) handle(pl payload) error {
 	case *initHello:
 		if err = hs.handleInitHello(req); err != nil {
 			return err
+		}
+
+		// Update peers endpoint of the init hello message
+		// has been received from an unknown address.
+		if hs.peer.endpoint == nil || !compareAddr(hs.peer.endpoint, from) {
+			hs.peer.endpoint = from
+			hs.peer.logger.Debug("Learned new endpoint", slog.Any("endpoint", from))
 		}
 
 		if resp, err = hs.sendRespHello(); err != nil {
@@ -236,7 +223,5 @@ func (s *Server) handle(pl payload) error {
 		return fmt.Errorf("missing peer?")
 	}
 
-	s.logger.Debug("Sending message", "type", msgTypeFromPayload(resp))
-
-	return s.conn.Send(resp, hs.peer)
+	return hs.send(resp)
 }

@@ -6,102 +6,140 @@ package rosenpass_test
 import (
 	"encoding/base64"
 	"net"
-	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	rp "github.com/stv0g/go-rosenpass"
+	"github.com/stv0g/go-rosenpass/internal/test"
 	"golang.org/x/exp/slog"
 )
 
-func TestMain(m *testing.M) {
-	textHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	})
-	logger := slog.New(textHandler)
+type handshakeHandler struct {
+	keys chan rp.Key
+}
 
-	slog.SetDefault(logger)
-
-	m.Run()
+func (h *handshakeHandler) HandshakeCompleted(pid rp.PeerID, key rp.Key) {
+	h.keys <- key
 }
 
 func TestServer(t *testing.T) {
+	newRustServer := func(name string, cfg rp.Config) (test.Server, error) {
+		dir := filepath.Join(t.TempDir(), name)
+
+		cfg.Logger = slog.Default().With("node", name)
+
+		return test.NewRustServer(cfg, dir)
+	}
+
+	newGolangServer := func(name string, cfg rp.Config) (test.Server, error) {
+		cfg.Logger = slog.Default().With("node", name)
+
+		return rp.NewUDPServer(cfg)
+	}
+
+	t.Run("Rust to Rust", func(t *testing.T) {
+		testServer(t, newRustServer, newRustServer)
+	})
+
+	t.Run("Go to Go", func(t *testing.T) {
+		testServer(t, newGolangServer, newGolangServer)
+	})
+
+	t.Run("Rust to Go", func(t *testing.T) {
+		testServer(t, newRustServer, newGolangServer)
+	})
+
+	t.Run("Go to Rust", func(t *testing.T) {
+		testServer(t, newGolangServer, newRustServer)
+	})
+}
+
+func testServer(t *testing.T, newAlice, newBob func(string, rp.Config) (test.Server, error)) {
 	require := require.New(t)
 
+	// Generate keys
 	psk, err := rp.GeneratePresharedKey()
 	require.NoError(err)
 
-	h1 := &handshakeHandler{
-		keys: make(chan rp.Key),
+	secretKeyAlice, publicKeyAlice, err := rp.GenerateKeyPair()
+	require.NoError(err)
+
+	secretKeyBob, publicKeyBob, err := rp.GenerateKeyPair()
+	require.NoError(err)
+
+	// Generate configurations
+	handlerAlice := &handshakeHandler{
+		keys: make(chan rp.Key, 2),
 	}
-	h2 := &handshakeHandler{
-		keys: make(chan rp.Key),
+
+	handlerBob := &handshakeHandler{
+		keys: make(chan rp.Key, 2),
 	}
 
 	cfgAlice := rp.Config{
+		PublicKey: publicKeyAlice,
+		SecretKey: secretKeyAlice,
 		Listen: &net.UDPAddr{
-			IP:   net.ParseIP("127.0.0.1"),
+			IP:   net.IPv6loopback,
 			Port: 1234,
 		},
 		Peers: []rp.PeerConfig{
 			{
 				PresharedKey: psk,
 				Endpoint: &net.UDPAddr{
-					IP:   net.ParseIP("127.0.0.1"),
+					IP:   net.IPv6loopback,
 					Port: 1235,
 				},
 			},
 		},
 		Handlers: []rp.HandshakeHandler{
-			h1,
+			handlerAlice,
 		},
-		Logger: slog.Default().With("peer", "alice"),
 	}
 
 	cfgBob := rp.Config{
+		PublicKey: publicKeyBob,
+		SecretKey: secretKeyBob,
 		Listen: &net.UDPAddr{
-			IP:   net.ParseIP("127.0.0.1"),
+			IP:   net.IPv6loopback,
 			Port: 1235,
 		},
 		Peers: []rp.PeerConfig{
 			{
 				PresharedKey: psk,
-				Endpoint: &net.UDPAddr{
-					IP:   net.ParseIP("127.0.0.1"),
-					Port: 1234,
-				},
+				// Bob should be responder
+				// so we dont specify and endpoint for Alice
 			},
 		},
 		Handlers: []rp.HandshakeHandler{
-			h2,
+			handlerBob,
 		},
-		Logger: slog.Default().With("peer", "bob"),
 	}
-
-	cfgAlice.SecretKey, cfgAlice.PublicKey, err = rp.GenerateKeyPair()
-	require.NoError(err)
-
-	cfgBob.SecretKey, cfgBob.PublicKey, err = rp.GenerateKeyPair()
-	require.NoError(err)
 
 	cfgAlice.Peers[0].PublicKey = cfgBob.PublicKey
 	cfgBob.Peers[0].PublicKey = cfgAlice.PublicKey
 
-	svrAlice, err := rp.NewUDPServer(cfgAlice)
+	// Create servers
+	svrAlice, err := newAlice("alice", cfgAlice)
 	require.NoError(err)
-	require.NoError(svrAlice.Run())
 
-	svrBob, err := rp.NewUDPServer(cfgBob)
+	svrBob, err := newBob("bob", cfgBob)
 	require.NoError(err)
-	require.NoError(svrBob.Run())
+
+	err = svrAlice.Run()
+	require.NoError(err)
+
+	err = svrBob.Run()
+	require.NoError(err)
 
 	for i := 0; i < 1; i++ {
-		psk1 := <-h1.keys
-		psk2 := <-h2.keys
+		oskAlice := <-handlerAlice.keys
+		oskBob := <-handlerBob.keys
 
-		require.Equal(psk1, psk2, "Keys differ in exchange %d", i)
+		require.Equal(oskAlice, oskBob, "Keys differ in exchange %d", i)
 
-		t.Logf("OSK: %s\n", base64.StdEncoding.EncodeToString(psk1[:]))
+		t.Logf("OSK: %s\n", base64.StdEncoding.EncodeToString(oskAlice[:]))
 	}
 
 	require.NoError(svrAlice.Close())
