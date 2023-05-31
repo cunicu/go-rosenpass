@@ -15,12 +15,14 @@ import (
 )
 
 var (
+	// TODO: Only expose errors which are need on the public API
 	ErrUnexpectedMsgType = errors.New("received unexpected message type")
 	ErrPeerNotFound      = errors.New("peer not found")
 	ErrSessionNotFound   = errors.New("session not found")
 	ErrInvalidAuthTag    = errors.New("invalid authentication tag")
 	ErrReplayDetected    = errors.New("detected replay")
 	ErrStaleNonce        = errors.New("stale nonce")
+	ErrInvalidBiscuit    = errors.New("failed decrypt biscuit")
 )
 
 type role int
@@ -466,9 +468,11 @@ func (hs *handshake) decapAndMix(kemAlg string, sk, pk, ct []byte) error {
 }
 
 func (hs *handshake) storeBiscuit() (sealedBiscuit, error) {
+	hs.server.biscuitLock.Lock()
 	hs.server.biscuitCtr.Inc(1)
-
-	k := hs.server.biscuitKeys[0]
+	biscuitNo := hs.server.biscuitCtr
+	biscuitKey := hs.server.biscuitKeys[0]
+	hs.server.biscuitLock.Unlock()
 
 	n, err := generateNonce()
 	if err != nil {
@@ -476,14 +480,14 @@ func (hs *handshake) storeBiscuit() (sealedBiscuit, error) {
 	}
 
 	b := biscuit{
-		biscuitNo: hs.server.biscuitCtr,
+		biscuitNo: biscuitNo,
 		pidi:      hs.peer.PID(),
 		ck:        hs.ck,
 	}
 
 	pt := b.MarshalBinary()
 
-	xaead, err := newXAEAD(k)
+	xaead, err := newXAEAD(biscuitKey)
 	if err != nil {
 		return sealedBiscuit{}, err
 	}
@@ -498,45 +502,53 @@ func (hs *handshake) storeBiscuit() (sealedBiscuit, error) {
 
 func (hs *handshake) loadBiscuit(sb sealedBiscuit) (biscuitNo, error) {
 	nct := sb[:]
-	k := hs.server.biscuitKeys[0]
 	n, ct := nct[:nonceSizeX], nct[nonceSizeX:]
+
 	ad := khBiscuitAdditionalData.hash(hs.server.spkm[:], hs.sidi[:], hs.sidr[:])
 
-	xaead, err := newXAEAD(k)
-	if err != nil {
-		return biscuitNo{}, err
+	hs.server.biscuitLock.RLock()
+	biscuitKeys := hs.server.biscuitKeys
+	hs.server.biscuitLock.RUnlock()
+
+	for _, k := range biscuitKeys {
+		xaead, err := newXAEAD(k)
+		if err != nil {
+			return biscuitNo{}, err
+		}
+
+		pt, err := xaead.Open(nil, n, ct, ad[:])
+		if err != nil {
+			continue // Try next biscuit key
+		}
+
+		var b biscuit
+		if _, err = b.UnmarshalBinary(pt); err != nil {
+			return biscuitNo{}, err
+		}
+
+		// Find the peer and apply retransmission protection
+		var ok bool
+		if hs.peer, ok = hs.server.peers[b.pidi]; !ok {
+			return biscuitNo{}, ErrPeerNotFound
+		}
+
+		// assert(pt.biscuit_no ≤ peer.biscuit_used);
+		if hs.peer.biscuitUsed.LargerOrEqual(b.biscuitNo) {
+			return biscuitNo{}, ErrReplayDetected
+		}
+
+		// Restore the chaining key
+		hs.ck = b.ck
+
+		hs.mix(nct)
+
+		// Expose the biscuit no,
+		// so the handshake code can differentiate
+		// retransmission requests and first time handshake completion
+		return b.biscuitNo, nil
 	}
 
-	pt, err := xaead.Open(nil, n, ct, ad[:])
-	if err != nil {
-		return biscuitNo{}, err
-	}
-
-	var b biscuit
-	if _, err = b.UnmarshalBinary(pt); err != nil {
-		return biscuitNo{}, err
-	}
-
-	// Find the peer and apply retransmission protection
-	var ok bool
-	if hs.peer, ok = hs.server.peers[b.pidi]; !ok {
-		return biscuitNo{}, ErrPeerNotFound
-	}
-
-	// assert(pt.biscuit_no ≤ peer.biscuit_used);
-	if hs.peer.biscuitUsed.LargerOrEqual(b.biscuitNo) {
-		return biscuitNo{}, ErrReplayDetected
-	}
-
-	// Restore the chaining key
-	hs.ck = b.ck
-
-	hs.mix(nct)
-
-	// Expose the biscuit no,
-	// so the handshake code can differentiate
-	// retransmission requests and first time handshake completion
-	return b.biscuitNo, nil
+	return biscuitNo{}, ErrInvalidBiscuit
 }
 
 // Retransmission

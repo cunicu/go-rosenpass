@@ -115,6 +115,14 @@ func generateNonce() (nonceX, error) {
 	}
 }
 
+func generateBiscuitKey() (key, error) {
+	if n, err := generateKey(keySize); err != nil {
+		return key{}, err
+	} else {
+		return key(n), nil
+	}
+}
+
 func generateKey(l int) ([]byte, error) {
 	p := make([]byte, l)
 

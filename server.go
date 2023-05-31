@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync"
+	"time"
 
 	"golang.org/x/exp/slog"
 	"golang.org/x/sync/errgroup"
@@ -21,8 +23,10 @@ type Server struct {
 	sskm     ssk
 	handlers []HandshakeHandler
 
-	biscuitKeys []key
-	biscuitCtr  biscuitNo
+	biscuitKeys   [2]key
+	biscuitCtr    biscuitNo
+	biscuitTicker *time.Ticker
+	biscuitLock   sync.RWMutex
 
 	peers      map[pid]*peer      // A lookup table mapping the peer ID to the internal peer structure
 	handshakes map[sid]*handshake // A lookup table mapping the session ID to the ongoing initiator handshake or live session
@@ -43,12 +47,20 @@ func NewUDPServer(cfg Config) (*Server, error) {
 }
 
 func NewServer(cfg Config) (*Server, error) {
+	biscuitKey, err := generateKey(keySize)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate biscuit key: %w", err)
+	}
+
 	s := &Server{
 		spkm:     cfg.PublicKey,
 		sskm:     cfg.SecretKey,
 		handlers: cfg.Handlers,
 
-		biscuitKeys: []key{},
+		biscuitKeys: [2]key{
+			key(biscuitKey),
+		},
+		biscuitTicker: time.NewTicker(BiscuitEpoch),
 
 		peers:      map[pid]*peer{},
 		handshakes: map[sid]*handshake{},
@@ -59,15 +71,6 @@ func NewServer(cfg Config) (*Server, error) {
 
 	if s.logger == nil {
 		s.logger = slog.Default()
-	}
-
-	biscuitKey, err := generateKey(keySize)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate biscuit key: %w", err)
-	}
-
-	s.biscuitKeys = []key{
-		key(biscuitKey),
 	}
 
 	for _, pCfg := range cfg.Peers {
@@ -82,6 +85,7 @@ func NewServer(cfg Config) (*Server, error) {
 	}
 
 	go s.receiveLoop()
+	go s.biscuitLoop()
 
 	return s, nil
 }
@@ -128,6 +132,35 @@ func (s *Server) receiveLoop() {
 			continue
 		}
 	}
+}
+
+func (s *Server) biscuitLoop() {
+	for range s.biscuitTicker.C {
+		if err := s.rotateBiscuitKey(); err != nil {
+			s.logger.Error("Failed to generate biscuit key", slog.Any("error", err))
+		}
+	}
+}
+
+func (s *Server) rotateBiscuitKey() error {
+	s.logger.Debug("Renewing biscuit key")
+
+	newBiscuitKey, err := generateBiscuitKey()
+	if err != nil {
+		return err
+	}
+
+	s.biscuitLock.Lock()
+	defer s.biscuitLock.Unlock()
+
+	oldBiscuitKey := s.biscuitKeys[0]
+
+	s.biscuitKeys = [2]key{
+		newBiscuitKey,
+		oldBiscuitKey,
+	}
+
+	return nil
 }
 
 func (s *Server) handle(pl payload, from *net.UDPAddr) error {
