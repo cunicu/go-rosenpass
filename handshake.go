@@ -38,6 +38,9 @@ type handshake struct {
 
 	role role
 
+	txTimer      *time.Timer
+	txRetryCount uint
+
 	nextMsg msgType // The type of the next expected message
 
 	sidi sid // Initiator session ID
@@ -53,10 +56,6 @@ type handshake struct {
 	txkm key // My transmission key
 	txkt key // Their transmission key
 	osk  key // Output shared key
-
-	txPayload    payload
-	txTimer      *time.Timer
-	txRetryCount uint
 
 	biscuit sealedBiscuit
 }
@@ -553,20 +552,25 @@ func (hs *handshake) loadBiscuit(sb sealedBiscuit) (biscuitNo, error) {
 
 // Retransmission
 
-func (hs *handshake) scheduleRetransmission() {
-	after := RetransmitDelayBegin
+func (hs *handshake) scheduleRetransmission(pl payload) {
+	random := 2*rand.Float64() - 1
 
-	after += time.Duration(math.Pow(RetransmitDelayGrowth, float64(hs.txRetryCount)))
-	if after > RetransmitDelayEnd {
-		after = RetransmitDelayEnd
+	after := RetransmitDelayBegin.Seconds() * math.Pow(RetransmitDelayGrowth, float64(hs.txRetryCount))
+	if after > RetransmitDelayEnd.Seconds() {
+		after = RetransmitDelayEnd.Seconds()
 	}
 
-	after += time.Duration((2*rand.Float64() - 1) * float64(RetransmitDelayJitter))
+	after += random * RetransmitDelayJitter.Seconds()
 
-	hs.txTimer = time.AfterFunc(after, func() {
+	hs.txTimer = time.AfterFunc(time.Duration(after*1e6)*time.Microsecond, func() {
 		hs.txRetryCount++
 
-		if err := hs.send(hs.txPayload); err != nil {
+		switch pl.(type) {
+		case *initHello, *initConf: // Only InitHello and InitConf messages are retransmitted
+			hs.scheduleRetransmission(pl)
+		}
+
+		if err := hs.server.conn.Send(pl, hs.peer); err != nil {
 			hs.peer.logger.Error("Failed to send", slog.Any("error", err))
 		}
 	})
@@ -575,17 +579,11 @@ func (hs *handshake) scheduleRetransmission() {
 func (hs *handshake) send(pl payload) error {
 	hs.peer.logger.Debug("Sending message", "type", msgTypeFromPayload(pl))
 
-	if hs.txTimer != nil {
-		hs.txTimer.Stop()
-	}
-
-	hs.txPayload = pl
 	hs.txRetryCount = 0
 
 	switch pl.(type) {
-	// Only InitHello and InitConf messages are retransmitted
-	case *initHello, *initConf:
-		hs.scheduleRetransmission()
+	case *initHello, *initConf: // Only InitHello and InitConf messages are retransmitted
+		hs.scheduleRetransmission(pl)
 	}
 
 	return hs.server.conn.Send(pl, hs.peer)
