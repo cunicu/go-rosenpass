@@ -11,7 +11,10 @@
 
 go-rosenpass is a port of [Rosenpass](https://github.com/rosenpass/rosenpass) to [Go](https://go.dev/).
 
-The implemented aims for on-wire and CLI compatibility with the reference implementation in Rust.
+The implementation aims to be compatible with the reference implementation in Rust for the:
+- on-wire protocol
+- handshake parameters
+- command-line interface
 
 ## References
 
