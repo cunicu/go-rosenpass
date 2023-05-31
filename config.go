@@ -4,6 +4,7 @@
 package rosenpass
 
 import (
+	"errors"
 	"net"
 
 	"golang.org/x/exp/slog"
@@ -21,4 +22,8 @@ type Config struct {
 	Conn conn
 
 	Logger *slog.Logger
+}
+
+func ConfigFromArgs(args []string) (Config, error) {
+	return Config{}, errors.New("not supported yet")
 }
