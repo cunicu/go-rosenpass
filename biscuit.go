@@ -21,6 +21,10 @@ func (n *biscuitNo) Store(m uint64) {
 	binary.LittleEndian.PutUint64(n[:], m)
 }
 
+func (n *biscuitNo) Equal(m biscuitNo) bool {
+	return n.Load() == m.Load()
+}
+
 func (n *biscuitNo) Larger(m biscuitNo) bool {
 	return n.Load() > m.Load()
 }

@@ -93,7 +93,7 @@ func (f *File) ToConfig() (c rp.Config, err error) {
 		peers: map[rp.PeerID][]string{},
 	}
 	kh := &keyoutFileHandler{
-		peers: map[rp.PeerID]io.Writer{},
+		peers: map[rp.PeerID]io.WriteSeeker{},
 	}
 
 	for _, p := range f.Peers {
@@ -141,8 +141,8 @@ func (f *File) FromConfig(c rp.Config, dir string) (err error) {
 		return err
 	}
 
-	for _, pc := range c.Peers {
-		pDir := filepath.Join(dir, pc.PID().String())
+	for i, pc := range c.Peers {
+		pDir := filepath.Join(dir, fmt.Sprintf("peer%d", i))
 		if err := os.MkdirAll(pDir, 0o755); err != nil {
 			return err
 		}

@@ -5,6 +5,9 @@ package rosenpass_test
 
 import (
 	"encoding/base64"
+	"fmt"
+	"math"
+	"math/rand"
 	"net"
 	"path/filepath"
 	"testing"
@@ -24,38 +27,61 @@ func (h *handshakeHandler) HandshakeCompleted(pid rp.PeerID, key rp.Key) {
 }
 
 func TestServer(t *testing.T) {
-	newRustServer := func(name string, cfg rp.Config) (test.Server, error) {
-		dir := filepath.Join(t.TempDir(), name)
+	run := func(t *testing.T, newGoServer, newRustServer func(*testing.T, string, rp.Config) (test.Server, error)) {
+		testHandshake(t, newGoServer, newGoServer)
 
-		cfg.Logger = slog.Default().With("node", name)
+		t.Run("interop", func(t *testing.T) {
+			t.Run("Rust to Go", func(t *testing.T) {
+				testHandshake(t, newRustServer, newGoServer)
+			})
 
-		return test.NewRustServer(cfg, dir)
+			t.Run("Go to Rust", func(t *testing.T) {
+				testHandshake(t, newGoServer, newRustServer)
+			})
+		})
 	}
 
-	newGolangServer := func(name string, cfg rp.Config) (test.Server, error) {
-		cfg.Logger = slog.Default().With("node", name)
-
-		return rp.NewUDPServer(cfg)
-	}
-
-	t.Run("Rust to Rust", func(t *testing.T) {
-		testServer(t, newRustServer, newRustServer)
+	t.Run("Rust", func(t *testing.T) {
+		testHandshake(t, newStandaloneRustServer, newStandaloneRustServer)
 	})
 
-	t.Run("Go to Go", func(t *testing.T) {
-		testServer(t, newGolangServer, newGolangServer)
+	t.Run("in-process", func(t *testing.T) {
+		run(t, newGoServer, newStandaloneRustServer)
 	})
 
-	t.Run("Rust to Go", func(t *testing.T) {
-		testServer(t, newRustServer, newGolangServer)
-	})
-
-	t.Run("Go to Rust", func(t *testing.T) {
-		testServer(t, newGolangServer, newRustServer)
+	t.Run("standalone", func(t *testing.T) {
+		run(t, newStandaloneGoServer, newStandaloneRustServer)
 	})
 }
 
-func testServer(t *testing.T, newAlice, newBob func(string, rp.Config) (test.Server, error)) {
+func newGoServer(t *testing.T, name string, cfg rp.Config) (test.Server, error) {
+	cfg.Logger = slog.Default().With("node", name)
+
+	return rp.NewUDPServer(cfg)
+}
+
+func newStandaloneGoServer(t *testing.T, name string, cfg rp.Config) (test.Server, error) {
+	executable, err := test.EnsureBuild(t)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build go-rosenpass: %w", err)
+	}
+
+	dir := filepath.Join(t.TempDir(), name)
+
+	cfg.Logger = slog.Default().With("node", name)
+
+	return test.NewStandaloneServer(cfg, executable, dir)
+}
+
+func newStandaloneRustServer(t *testing.T, name string, cfg rp.Config) (test.Server, error) {
+	dir := filepath.Join(t.TempDir(), name)
+
+	cfg.Logger = slog.Default().With("node", name)
+
+	return test.NewStandaloneServer(cfg, "rosenpass", dir)
+}
+
+func testHandshake(t *testing.T, newAlice, newBob func(*testing.T, string, rp.Config) (test.Server, error)) {
 	require := require.New(t)
 
 	// Generate keys
@@ -77,19 +103,22 @@ func testServer(t *testing.T, newAlice, newBob func(string, rp.Config) (test.Ser
 		keys: make(chan rp.Key, 2),
 	}
 
+	portAlice := int(1024 + rand.Int31n(math.MaxUint16-1024))
+	portBob := int(1024 + rand.Int31n(math.MaxUint16-1024))
+
 	cfgAlice := rp.Config{
 		PublicKey: publicKeyAlice,
 		SecretKey: secretKeyAlice,
 		Listen: &net.UDPAddr{
 			IP:   net.IPv6loopback,
-			Port: 1234,
+			Port: portAlice,
 		},
 		Peers: []rp.PeerConfig{
 			{
 				PresharedKey: psk,
 				Endpoint: &net.UDPAddr{
 					IP:   net.IPv6loopback,
-					Port: 1235,
+					Port: portBob,
 				},
 			},
 		},
@@ -103,7 +132,7 @@ func testServer(t *testing.T, newAlice, newBob func(string, rp.Config) (test.Ser
 		SecretKey: secretKeyBob,
 		Listen: &net.UDPAddr{
 			IP:   net.IPv6loopback,
-			Port: 1235,
+			Port: portBob,
 		},
 		Peers: []rp.PeerConfig{
 			{
@@ -121,10 +150,10 @@ func testServer(t *testing.T, newAlice, newBob func(string, rp.Config) (test.Ser
 	cfgBob.Peers[0].PublicKey = cfgAlice.PublicKey
 
 	// Create servers
-	svrAlice, err := newAlice("alice", cfgAlice)
+	svrAlice, err := newAlice(t, "alice", cfgAlice)
 	require.NoError(err)
 
-	svrBob, err := newBob("bob", cfgBob)
+	svrBob, err := newBob(t, "bob", cfgBob)
 	require.NoError(err)
 
 	err = svrAlice.Run()

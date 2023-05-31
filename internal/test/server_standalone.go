@@ -16,15 +16,13 @@ import (
 	"github.com/stv0g/go-rosenpass/config"
 )
 
-const rosenpassExecutable = "rosenpass"
-
-type RustServer struct {
+type StandaloneServer struct {
 	cmd *exec.Cmd
 }
 
-func NewRustServer(cfg rp.Config, dir string) (*RustServer, error) {
-	s := &RustServer{
-		cmd: exec.Command(rosenpassExecutable),
+func NewStandaloneServer(cfg rp.Config, executable, dir string) (*StandaloneServer, error) {
+	s := &StandaloneServer{
+		cmd: exec.Command(executable),
 	}
 
 	s.cmd.Stdout = os.Stdout
@@ -50,13 +48,13 @@ func NewRustServer(cfg rp.Config, dir string) (*RustServer, error) {
 	return s, nil
 }
 
-func (s *RustServer) Run() error {
+func (s *StandaloneServer) Run() error {
 	log.Printf("Starting rosenpass %s", strings.Join(s.cmd.Args, " "))
 
 	return s.cmd.Start()
 }
 
-func (s *RustServer) Close() error {
+func (s *StandaloneServer) Close() error {
 	if err := s.cmd.Process.Signal(os.Interrupt); err != nil {
 		return fmt.Errorf("failed to interrupt process: %w", err)
 	}

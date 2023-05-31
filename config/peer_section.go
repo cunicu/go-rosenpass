@@ -38,7 +38,11 @@ func (f *PeerSection) ToConfig() (pc rosenpass.PeerConfig, err error) {
 		if k, err := os.ReadFile(*f.PresharedKey); err != nil {
 			return pc, fmt.Errorf("failed to read public key: %w", err)
 		} else {
-			pc.PresharedKey = rp.PresharedKey(k)
+			if psk, err := base64.StdEncoding.DecodeString(string(k)); err != nil {
+				return pc, fmt.Errorf("failed to parse preshared key: %w", err)
+			} else {
+				pc.PresharedKey = rp.Key(psk)
+			}
 		}
 	}
 
@@ -52,6 +56,10 @@ func (f *PeerSection) ToConfig() (pc rosenpass.PeerConfig, err error) {
 }
 
 func (c *PeerSection) FromConfig(pc rp.PeerConfig, dir string, handlers []rp.HandshakeHandler) (err error) {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("failed to create dir: %w", err)
+	}
+
 	if pc.Endpoint != nil {
 		ep := pc.Endpoint.String()
 		c.Endpoint = &ep

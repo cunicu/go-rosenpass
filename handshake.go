@@ -244,6 +244,8 @@ func (hs *handshake) handleRespHello(r *respHello) error {
 		return fmt.Errorf("%w (RHI7): %w", ErrInvalidAuthTag, err)
 	}
 
+	hs.txTimer.Stop()
+
 	return nil
 }
 
@@ -299,6 +301,10 @@ func (hs *handshake) handleInitConf(i *initConf) error {
 	// ICR5: Biscuit replay detection.
 	if !bNo.Larger(hs.peer.biscuitUsed) {
 		return fmt.Errorf("%w (ICR5)", ErrReplayDetected)
+	} else if bNo.Equal(hs.peer.biscuitUsed) {
+		// This is a retransmitted InitConf message.
+		// We skip ICR6 & ICR6 and just reply with EmptyData
+		return nil
 	}
 
 	// ICR6: Biscuit replay detection.
@@ -362,6 +368,8 @@ func (hs *handshake) handleEmptyData(e *emptyData) error {
 	for _, h := range hs.server.handlers {
 		h.HandshakeCompleted(hs.peer.PID(), hs.osk)
 	}
+
+	hs.txTimer.Stop()
 
 	return nil
 }

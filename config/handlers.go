@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	rp "github.com/stv0g/go-rosenpass"
@@ -16,11 +17,16 @@ import (
 )
 
 type keyoutFileHandler struct {
-	peers map[rp.PeerID]io.Writer
+	peers map[rp.PeerID]io.WriteSeeker
 }
 
 func (h *keyoutFileHandler) addPeerKeyoutFile(pid rp.PeerID, path string) error {
-	if wr, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o600); err != nil {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("failed to create dir: %w", err)
+	}
+
+	if wr, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600); err != nil {
 		return err
 	} else {
 		h.peers[pid] = wr
@@ -30,7 +36,13 @@ func (h *keyoutFileHandler) addPeerKeyoutFile(pid rp.PeerID, path string) error 
 
 func (h *keyoutFileHandler) HandshakeCompleted(pid rp.PeerID, key rp.Key) {
 	if wr, ok := h.peers[pid]; ok {
-		fmt.Fprintln(wr, base64.StdEncoding.EncodeToString(key[:]))
+		if _, err := wr.Seek(0, io.SeekStart); err != nil {
+			slog.Error("Failed to seek", slog.Any("error", err))
+		}
+
+		if _, err := fmt.Fprintln(wr, base64.StdEncoding.EncodeToString(key[:])); err != nil {
+			slog.Error("Failed to write", slog.Any("error", err))
+		}
 	}
 }
 
