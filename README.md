@@ -7,9 +7,11 @@
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/stv0g/go-rosenpass?style=flat-square)
 [![Go Reference](https://pkg.go.dev/badge/github.com/stv0g/go-rosenpass.svg)](https://pkg.go.dev/github.com/stv0g/go-rosenpass)
 
-🚧 go-rosenpass is currently still in an Alpha state and not usable yet
+🚧 go-rosenpass has not been audited. Please use with care!
 
-go-rosenpass is an **experimental** port of [rosenpass](https://github.com/rosenpass/rosenpass) to Go.
+go-rosenpass is a port of [Rosenpass](https://github.com/rosenpass/rosenpass) to [Go](https://go.dev/).
+
+The implemented aims for on-wire and CLI compatibility with the reference implementation in Rust.
 
 ## References
 
@@ -23,7 +25,7 @@ go-rosenpass is an **experimental** port of [rosenpass](https://github.com/rosen
 
 ## License
 
-go-rosenpass is licenses under the Apache 2.0 license.
+go-rosenpass is licensed under the Apache 2.0 license.
 
 - SPDX-FileCopyrightText: 2023 Steffen Vogel <post@steffenvogel.de>
 - SPDX-License-Identifier: Apache-2.0
