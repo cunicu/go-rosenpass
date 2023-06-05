@@ -31,6 +31,15 @@ func (h *keyoutFileHandler) addPeerKeyoutFile(pid rp.PeerID, path string) error 
 }
 
 func (h *keyoutFileHandler) HandshakeCompleted(pid rp.PeerID, key rp.Key) {
+	h.outputKey(rp.KeyOutputReasonExchanged, pid, key)
+}
+
+func (h *keyoutFileHandler) HandshakeExpired(pid rp.PeerID) {
+	key, _ := rp.GeneratePresharedKey()
+	h.outputKey(rp.KeyOutputReasonStale, pid, key)
+}
+
+func (h *keyoutFileHandler) outputKey(reason rp.KeyOutputReason, pid rp.PeerID, key rp.Key) {
 	fn, ok := h.peers[pid]
 	if !ok {
 		return
@@ -40,6 +49,12 @@ func (h *keyoutFileHandler) HandshakeCompleted(pid rp.PeerID, key rp.Key) {
 	if err := os.WriteFile(fn, []byte(b64Key), 0o600); err != nil {
 		slog.Error("Failed to write", slog.Any("error", err))
 	}
+
+	rp.KeyOutput{
+		Peer:    pid,
+		KeyFile: fn,
+		Why:     reason,
+	}.Dump(os.Stdout) //nolint:errcheck
 }
 
 type exchangeCommandHandler struct {
