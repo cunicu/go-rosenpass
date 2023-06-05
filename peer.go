@@ -60,8 +60,12 @@ func (s *Server) newPeer(cfg *PeerConfig) (*peer, error) {
 	return p, nil
 }
 
+func PeerIDFromPublicKey(spk spk) pid {
+	return pid(khPeerID.hash(spk[:]))
+}
+
 func (p *peer) PID() pid {
-	return pid(khPeerID.hash(p.spkt[:]))
+	return PeerIDFromPublicKey(p.spkt)
 }
 
 func (p *peer) initiateHandshake() (*handshake, error) {

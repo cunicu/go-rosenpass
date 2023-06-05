@@ -124,6 +124,15 @@ type (
 	Key          = key
 )
 
+func ParsePeerID(s string) (pid, error) {
+	p, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		return pid{}, err
+	}
+
+	return pid(p), nil
+}
+
 func (p pid) String() string {
 	return base64.StdEncoding.EncodeToString(p[:])
 }
