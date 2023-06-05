@@ -68,15 +68,16 @@ func (p *peer) PID() pid {
 	return PeerIDFromPublicKey(p.spkt)
 }
 
-func (p *peer) initiateHandshake() (*handshake, error) {
+func (p *peer) initiateHandshake() (*initiatorHandshake, error) {
 	if p.endpoint == nil {
 		return nil, ErrMissingEndpoint
 	}
 
-	hs := &handshake{
-		peer:   p,
-		server: p.server,
-		role:   initiator,
+	hs := &initiatorHandshake{
+		handshake: handshake{
+			peer:   p,
+			server: p.server,
+		},
 	}
 
 	m, err := hs.sendInitHello()

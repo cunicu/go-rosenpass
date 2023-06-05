@@ -23,9 +23,9 @@ type Server struct {
 	biscuitTicker *time.Ticker
 	biscuitLock   sync.RWMutex // Protects biscuitCtr and biscuitKeys
 
-	peers          map[pid]*peer      // A lookup table mapping the peer ID to the internal peer structure
-	handshakes     map[sid]*handshake // A lookup table mapping the session ID to the ongoing initiator handshake or live session
-	handshakesLock sync.RWMutex       // Protects handshakes
+	peers          map[pid]*peer               // A lookup table mapping the peer ID to the internal peer structure
+	handshakes     map[sid]*initiatorHandshake // A lookup table mapping the session ID to the ongoing initiator handshake or live session
+	handshakesLock sync.RWMutex                // Protects handshakes
 
 	conn   conn
 	logger *slog.Logger
@@ -59,7 +59,7 @@ func NewServer(cfg Config) (*Server, error) {
 		biscuitTicker: time.NewTicker(BiscuitEpoch),
 
 		peers:      map[pid]*peer{},
-		handshakes: map[sid]*handshake{},
+		handshakes: map[sid]*initiatorHandshake{},
 		conn:       cfg.Conn,
 
 		logger: cfg.Logger,
@@ -165,8 +165,6 @@ func (s *Server) rotateBiscuitKey() error {
 }
 
 func (s *Server) handle(pl payload, from *net.UDPAddr) error {
-	var hs *handshake
-	var ok bool
 	var err error
 
 	mTyp := msgTypeFromPayload(pl)
@@ -175,40 +173,13 @@ func (s *Server) handle(pl payload, from *net.UDPAddr) error {
 
 	// Get or create handshake state
 	switch req := pl.(type) {
-	case *initHello, *initConf:
-		hs = &handshake{
-			server:  s,
-			nextMsg: mTyp,
-			role:    responder,
-		}
-
-	case *respHello:
-		s.handshakesLock.RLock()
-		hs, ok = s.handshakes[req.sidi]
-		s.handshakesLock.RUnlock()
-		if !ok {
-			return fmt.Errorf("%s: %s", ErrSessionNotFound, req.sidi)
-		}
-
-	case *emptyData:
-		s.handshakesLock.RLock()
-		hs, ok = s.handshakes[req.sid]
-		s.handshakesLock.RUnlock()
-		if !ok {
-			return fmt.Errorf("%s: %s", ErrSessionNotFound, req.sid)
-		}
-
-	default:
-		return ErrInvalidMsgType
-	}
-
-	if hs.nextMsg != mTyp {
-		return fmt.Errorf("%w: %s", ErrUnexpectedMsgType, mTyp)
-	}
-
-	// Handle message
-	switch req := pl.(type) {
 	case *initHello:
+		hs := &responderHandshake{
+			handshake: handshake{
+				server: s,
+			},
+		}
+
 		if err = hs.handleInitHello(req); err != nil {
 			return err
 		}
@@ -224,9 +195,18 @@ func (s *Server) handle(pl payload, from *net.UDPAddr) error {
 			return err
 		}
 
-		hs.nextMsg = msgTypeInitConf
-
 	case *respHello:
+		s.handshakesLock.RLock()
+		hs, ok := s.handshakes[req.sidi]
+		s.handshakesLock.RUnlock()
+		if !ok {
+			return fmt.Errorf("%s: %s", ErrSessionNotFound, req.sidi)
+		}
+
+		if hs.nextMsg != msgTypeRespHello {
+			return fmt.Errorf("%w: %s", ErrUnexpectedMsgType, mTyp)
+		}
+
 		if err = hs.handleRespHello(req); err != nil {
 			return err
 		}
@@ -240,6 +220,12 @@ func (s *Server) handle(pl payload, from *net.UDPAddr) error {
 		hs.nextMsg = msgTypeEmptyData
 
 	case *initConf:
+		hs := &responderHandshake{
+			handshake: handshake{
+				server: s,
+			},
+		}
+
 		if err = hs.handleInitConf(req); err != nil {
 			return err
 		}
@@ -248,17 +234,34 @@ func (s *Server) handle(pl payload, from *net.UDPAddr) error {
 			return err
 		}
 
-		hs.nextMsg = msgTypeData
-		s.completeHandshake(hs)
+		s.completeHandshake(&hs.handshake, RekeyAfterTimeResponder)
 
 	case *emptyData:
+		s.handshakesLock.RLock()
+		hs, ok := s.handshakes[req.sid]
+		s.handshakesLock.RUnlock()
+
+		if !ok {
+			return fmt.Errorf("%s: %s", ErrSessionNotFound, req.sid)
+		}
+
+		if hs.nextMsg != msgTypeEmptyData {
+			return fmt.Errorf("%w: %s", ErrUnexpectedMsgType, mTyp)
+		}
+
 		if err = hs.handleEmptyData(req); err != nil {
 			return err
 		}
 
 		hs.nextMsg = msgTypeData
 		hs.txTimer.Stop()
-		s.completeHandshake(hs)
+		hs.expiryTimer.Stop()
+
+		s.handshakesLock.Lock()
+		delete(s.handshakes, hs.sidi)
+		s.handshakesLock.Unlock()
+
+		s.completeHandshake(&hs.handshake, RekeyAfterTimeInitiator)
 
 	default:
 		return ErrInvalidMsgType
@@ -276,7 +279,7 @@ func (s *Server) initiateHandshake(p *peer) {
 		}
 	} else {
 		hs.expiryTimer = time.AfterFunc(RejectAfterTime, func() {
-			s.expireHandshake(hs)
+			s.expireHandshake(&hs.handshake)
 		})
 
 		s.handshakesLock.Lock()
@@ -285,26 +288,13 @@ func (s *Server) initiateHandshake(p *peer) {
 	}
 }
 
-func (s *Server) completeHandshake(hs *handshake) {
+func (s *Server) completeHandshake(hs *handshake, rekeyAfter time.Duration) {
 	hs.peer.logger.Debug("Handshake completed")
 
-	for _, h := range hs.server.handlers {
+	for _, h := range s.handlers {
 		if h, ok := h.(HandshakeCompletedHandler); ok {
 			h.HandshakeCompleted(hs.peer.PID(), hs.osk)
 		}
-	}
-
-	var rekeyAfter time.Duration
-	if hs.role == initiator {
-		hs.expiryTimer.Stop()
-
-		s.handshakesLock.Lock()
-		delete(s.handshakes, hs.sidi)
-		s.handshakesLock.Unlock()
-
-		rekeyAfter = RekeyAfterTimeInitiator
-	} else {
-		rekeyAfter = RekeyAfterTimeResponder
 	}
 
 	hs.peer.logger.Debug("Rekey", slog.Duration("after", rekeyAfter))
@@ -323,13 +313,11 @@ func (s *Server) completeHandshake(hs *handshake) {
 func (s *Server) expireHandshake(hs *handshake) {
 	hs.peer.logger.Debug("Handshake expired")
 
-	if hs.role == initiator {
-		s.handshakesLock.Lock()
-		delete(s.handshakes, hs.sidi)
-		s.handshakesLock.Unlock()
-	}
+	s.handshakesLock.Lock()
+	delete(s.handshakes, hs.sidi)
+	s.handshakesLock.Unlock()
 
-	for _, h := range hs.server.handlers {
+	for _, h := range s.handlers {
 		if h, ok := h.(HandshakeExpiredHandler); ok {
 			h.HandshakeExpired(hs.peer.PID())
 		}
