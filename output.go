@@ -4,10 +4,8 @@
 package rosenpass
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 )
 
@@ -26,31 +24,25 @@ type KeyOutput struct {
 	Why     KeyOutputReason
 }
 
-func ScanKeyOutput(rd io.Reader) (o KeyOutput, err error) {
-	scanner := bufio.NewScanner(rd)
+func ParseKeyOutput(str string) (o KeyOutput, err error) {
+	tokens := strings.Split(str, " ")
 
-	for scanner.Scan() {
-		tokens := strings.Split(scanner.Text(), " ")
-
-		if tokens[0] != "output-key" ||
-			tokens[1] != "peer" ||
-			tokens[3] != "key-file" {
-			return o, errors.New("invalid output format")
-		}
-
-		if o.Peer, err = ParsePeerID(tokens[2]); err != nil {
-			return o, fmt.Errorf("failed to parse peer id: %w", err)
-		}
-
-		o.KeyFile = tokens[4]
-		o.Why = KeyOutputReason(tokens[5])
-
-		break //nolint:staticcheck
+	if tokens[0] != "output-key" ||
+		tokens[1] != "peer" ||
+		tokens[3] != "key-file" {
+		return o, errors.New("invalid output format")
 	}
+
+	if o.Peer, err = ParsePeerID(tokens[2]); err != nil {
+		return o, fmt.Errorf("failed to parse peer id: %w", err)
+	}
+
+	o.KeyFile = strings.Trim(tokens[4], "\"")
+	o.Why = KeyOutputReason(tokens[5])
 
 	return o, nil
 }
 
-func (o KeyOutput) Dump(wr io.Writer) (int, error) {
-	return fmt.Fprintf(wr, "output-key peer %s key-file %s %s\n", o.Peer, o.KeyFile, o.Why)
+func (o KeyOutput) String() string {
+	return fmt.Sprintf("output-key peer %s key-file \"%s\" %s", o.Peer, o.KeyFile, o.Why)
 }

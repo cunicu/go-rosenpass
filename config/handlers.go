@@ -50,11 +50,12 @@ func (h *keyoutFileHandler) outputKey(reason rp.KeyOutputReason, pid rp.PeerID, 
 		slog.Error("Failed to write", slog.Any("error", err))
 	}
 
-	rp.KeyOutput{
+	ko := rp.KeyOutput{
 		Peer:    pid,
 		KeyFile: fn,
 		Why:     reason,
-	}.Dump(os.Stdout) //nolint:errcheck
+	}
+	fmt.Fprintln(os.Stdout, ko.String())
 }
 
 type exchangeCommandHandler struct {

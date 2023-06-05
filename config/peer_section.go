@@ -55,7 +55,7 @@ func (f *PeerSection) ToConfig() (pc rosenpass.PeerConfig, err error) {
 	return pc, err
 }
 
-func (c *PeerSection) FromConfig(pc rp.PeerConfig, dir string, handlers []rp.Handler) (err error) {
+func (c *PeerSection) FromConfig(pc rp.PeerConfig, dir string) (err error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("failed to create dir: %w", err)
 	}
@@ -64,6 +64,9 @@ func (c *PeerSection) FromConfig(pc rp.PeerConfig, dir string, handlers []rp.Han
 		ep := pc.Endpoint.String()
 		c.Endpoint = &ep
 	}
+
+	keyOutFile := filepath.Join(dir, "out.key")
+	c.KeyOut = &keyOutFile
 
 	c.PublicKey = filepath.Join(dir, "public.key")
 	if err := os.WriteFile(c.PublicKey, pc.PublicKey, 0o644); err != nil {
@@ -77,21 +80,6 @@ func (c *PeerSection) FromConfig(pc rp.PeerConfig, dir string, handlers []rp.Han
 			return err
 		}
 		c.PresharedKey = &presharedKey
-	}
-
-	if len(handlers) > 0 {
-		keyout := filepath.Join(dir, "osk.key")
-		c.KeyOut = &keyout
-
-		if _, err := keyoutWatcher(keyout, func(osk rp.Key) {
-			for _, h := range handlers {
-				if h, ok := h.(rp.HandshakeCompletedHandler); ok {
-					h.HandshakeCompleted(pc.PID(), osk)
-				}
-			}
-		}); err != nil {
-			return err
-		}
 	}
 
 	return nil

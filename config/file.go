@@ -148,7 +148,7 @@ func (f *File) FromConfig(c rp.Config, dir string) (err error) {
 		}
 
 		var ps PeerSection
-		if err := ps.FromConfig(pc, pDir, c.Handlers); err != nil {
+		if err := ps.FromConfig(pc, pDir); err != nil {
 			return err
 		} else {
 			f.Peers = append(f.Peers, ps)

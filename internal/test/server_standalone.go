@@ -4,9 +4,11 @@
 package test
 
 import (
+	"bufio"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -15,18 +17,37 @@ import (
 
 	rp "github.com/stv0g/go-rosenpass"
 	"github.com/stv0g/go-rosenpass/config"
+	"golang.org/x/exp/slog"
 )
 
 type StandaloneServer struct {
 	cmd *exec.Cmd
+
+	handlers []rp.Handler
+	logger   *slog.Logger
 }
 
 func NewStandaloneServer(cfg rp.Config, executable, dir string) (*StandaloneServer, error) {
 	s := &StandaloneServer{
 		cmd: exec.Command(executable),
+
+		handlers: cfg.Handlers,
+		logger:   cfg.Logger,
 	}
 
-	s.cmd.Stdout = os.Stdout
+	if s.logger == nil {
+		s.logger = slog.Default()
+	}
+
+	if len(s.handlers) > 0 {
+		rd, wr := io.Pipe()
+
+		go s.handleStdout(rd)
+
+		s.cmd.Stdout = io.MultiWriter(os.Stdout, wr)
+	} else {
+		s.cmd.Stdout = os.Stdout
+	}
 	s.cmd.Stderr = os.Stderr
 
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -68,6 +89,41 @@ func (s *StandaloneServer) Close() error {
 	}
 
 	return nil
+}
+
+func (s *StandaloneServer) handleStdout(rd io.Reader) {
+	scanner := bufio.NewScanner(rd)
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		ko, err := rp.ParseKeyOutput(line)
+		if err != nil {
+			s.logger.Error("Failed to parse stdout line", slog.String("line", line), slog.Any("error", err))
+			continue
+		}
+
+		switch ko.Why {
+		case rp.KeyOutputReasonExchanged:
+			key, err := readKeyOutFile(ko.KeyFile)
+			if err != nil {
+				s.logger.Error("Failed to read key file", slog.String("file", ko.KeyFile), slog.Any("error", err))
+				continue
+			}
+
+			for _, h := range s.handlers {
+				if h, ok := h.(rp.HandshakeCompletedHandler); ok {
+					h.HandshakeCompleted(ko.Peer, key)
+				}
+			}
+
+		case rp.KeyOutputReasonStale:
+			for _, h := range s.handlers {
+				if h, ok := h.(rp.HandshakeExpiredHandler); ok {
+					h.HandshakeExpired(ko.Peer)
+				}
+			}
+		}
+	}
 }
 
 type StandaloneGoServer struct {

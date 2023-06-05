@@ -4,7 +4,6 @@
 package rosenpass_test
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -14,22 +13,18 @@ import (
 func TestOutput(t *testing.T) {
 	require := require.New(t)
 
-	buffer := bytes.NewBuffer(nil)
-
 	_, spk, err := rp.GenerateKeyPair()
 	require.NoError(err)
 
-	o := rp.KeyOutput{
+	koExpected := rp.KeyOutput{
 		Peer:    rp.PeerIDFromPublicKey(spk),
 		KeyFile: "some_keyfile",
 		Why:     rp.KeyOutputReasonExchanged,
 	}
+	koStr := koExpected.String()
 
-	_, err = o.Dump(buffer)
+	koActual, err := rp.ParseKeyOutput(koStr)
 	require.NoError(err)
 
-	p, err := rp.ScanKeyOutput(buffer)
-	require.NoError(err)
-
-	require.Equal(o, p)
+	require.Equal(koExpected, koActual)
 }
