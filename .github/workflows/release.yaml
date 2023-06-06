@@ -1,0 +1,61 @@
+# SPDX-FileCopyrightText: 2023 Steffen Vogel <post@steffenvogel.de>
+# SPDX-License-Identifier: Apache-2.0
+
+name: goreleaser
+
+on:
+  push:
+    tags:
+    - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+  # issues: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - run: git fetch --force --tags
+
+    - name: Install system dependencies
+      run: sudo apt-get install -y
+        libsodium-dev
+        libclang-dev
+        pkg-config
+        cmake
+        ninja-build
+
+    - name: Checkout liboqs
+      uses: actions/checkout@v3
+      with:
+        repository: open-quantum-safe/liboqs
+        ref: main
+        path: liboqs
+    
+    - name: Install liboqs
+      run: |
+        mkdir -p liboqs/build && cd liboqs/build
+        cmake -GNinja \
+          -DOQS_BUILD_ONLY_LIB=ON \
+          -DOQS_MINIMAL_BUILD="KEM_kyber_512;KEM_classic_mceliece_460896" \
+          -DBUILD_SHARED_LIBS=ON \
+          -DCMAKE_INSTALL_PREFIX=/usr ..
+        sudo ninja install
+
+    - uses: actions/setup-go@v4
+      with:
+        go-version-file: go.mod
+        check-latest: true
+
+    - uses: goreleaser/goreleaser-action@v4
+      with:
+        version: latest
+        args: release --clean
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

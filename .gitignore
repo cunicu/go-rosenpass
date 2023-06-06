@@ -3,3 +3,4 @@
 
 go-rosenpass
 *.key
+dist/
