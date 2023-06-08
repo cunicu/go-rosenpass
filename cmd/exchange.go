@@ -12,12 +12,14 @@ import (
 )
 
 func exchange(cmd *cobra.Command, args []string) error {
-	cfg, err := rp.ConfigFromArgs(args)
+	_, cfgFile, err := config.ConfigFromArgs(args)
 	if err != nil {
 		return fmt.Errorf("failed to parse arguments: %s", err)
 	}
 
-	return doExchange(cfg)
+	setupLogging(cfgFile.Verbosity == "Verbose")
+
+	return doExchange(cfgFile)
 }
 
 func exchangeConfig(cmd *cobra.Command, args []string) error {
@@ -28,15 +30,17 @@ func exchangeConfig(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
+	setupLogging(cfgFile.Verbosity == "Verbose")
+
+	return doExchange(cfgFile)
+}
+
+func doExchange(cfgFile config.File) error {
 	cfg, err := cfgFile.ToConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	return doExchange(cfg)
-}
-
-func doExchange(cfg rp.Config) error {
 	svr, err := rp.NewUDPServer(cfg)
 	if err != nil {
 		return err

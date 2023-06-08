@@ -20,15 +20,18 @@ func main() {
 	logger = slog.New(slog.NewTextHandler(os.Stderr, nil))
 
 	rootCmd := &cobra.Command{
-		Use:              "rosepass",
-		PersistentPreRun: setupLogging,
-		SilenceUsage:     true,
+		Use:           "rosepass",
+		SilenceUsage:  true,
+		SilenceErrors: true,
 	}
 
 	validateCmd := &cobra.Command{
 		Use:   "validate",
 		Short: "Validate a configuration",
 		RunE:  validate,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			setupLogging(verbose)
+		},
 	}
 
 	genKeyCmd := &cobra.Command{
@@ -37,6 +40,9 @@ func main() {
 		Long:  "Send the public-key file to your communication partner and keep the secret-key file a secret!",
 		Args:  cobra.MaximumNArgs(1),
 		RunE:  genKey,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			setupLogging(verbose)
+		},
 	}
 
 	f := genKeyCmd.PersistentFlags()
@@ -75,7 +81,7 @@ func main() {
 	}
 }
 
-func setupLogging(cmd *cobra.Command, args []string) {
+func setupLogging(verbose bool) {
 	opts := &slog.HandlerOptions{}
 
 	if verbose {
@@ -84,4 +90,5 @@ func setupLogging(cmd *cobra.Command, args []string) {
 
 	handler := slog.NewTextHandler(os.Stdout, opts)
 	logger = slog.New(handler)
+	slog.SetDefault(logger)
 }
