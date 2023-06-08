@@ -38,7 +38,7 @@ func genKey(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("secret-key file \"%s\" exist, refusing to overwrite it", skPath)
 	}
 
-	ssk, spk, err := rp.GenerateKeyPair()
+	spk, ssk, err := rp.GenerateKeyPair()
 	if err != nil {
 		return err
 	}

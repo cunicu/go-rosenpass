@@ -20,7 +20,7 @@ func generateStaticKeyPair() ([]byte, []byte, error) {
 	if pk, sk, err := generateKeyPair(kemStatic); err != nil {
 		return nil, nil, err
 	} else {
-		return epk(pk), esk(sk), nil
+		return spk(pk), ssk(sk), nil
 	}
 }
 
