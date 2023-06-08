@@ -32,11 +32,14 @@ type Server struct {
 }
 
 func NewUDPServer(cfg Config) (*Server, error) {
-	if cfg.Listen != nil {
-		var err error
-		if cfg.Conn, err = newUDPConn(cfg.Listen); err != nil {
-			return nil, err
-		}
+	if cfg.Listen == nil {
+		// Listen on random port on all interfaces by default
+		cfg.Listen = &net.UDPAddr{}
+	}
+
+	var err error
+	if cfg.Conn, err = newUDPConn(cfg.Listen); err != nil {
+		return nil, err
 	}
 
 	return NewServer(cfg)
