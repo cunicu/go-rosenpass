@@ -30,11 +30,11 @@ func genKey(cmd *cobra.Command, args []string) error {
 		return errors.New("Either a config-file or both public-key and secret-key file are required")
 	}
 
-	if _, err := os.Stat(pkPath); err == nil {
+	if _, err := os.Stat(pkPath); err == nil && !force {
 		return fmt.Errorf("public-key file \"%s\" exist, refusing to overwrite it", pkPath)
 	}
 
-	if _, err := os.Stat(skPath); err == nil {
+	if _, err := os.Stat(skPath); err == nil && !force {
 		return fmt.Errorf("secret-key file \"%s\" exist, refusing to overwrite it", skPath)
 	}
 

@@ -13,7 +13,7 @@ import (
 var (
 	logger                     *slog.Logger
 	skPath, pkPath, configFile string
-	verbose                    bool
+	verbose, force             bool
 )
 
 func main() {
@@ -48,6 +48,20 @@ func main() {
 	f := genKeyCmd.PersistentFlags()
 	f.StringVarP(&pkPath, "public-key", "p", "", "where to write public-key to")
 	f.StringVarP(&skPath, "secret-key", "s", "", "where to write secret-key to")
+	f.BoolVarP(&force, "force", "f", false, "Forcefully overwrite public- & secret-key file")
+
+	genConfigCmd := &cobra.Command{
+		Use:   "gen-config config-file",
+		Short: "Generate a demo config file",
+		Args:  cobra.ExactArgs(1),
+		RunE:  genConfig,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			setupLogging(verbose)
+		},
+	}
+
+	f = genConfigCmd.PersistentFlags()
+	f.BoolVarP(&force, "force", "f", false, "Forcefully overwrite existing config file")
 
 	exchangeConfigCmd := &cobra.Command{
 		Use:   "exchange-config config-file",
@@ -71,6 +85,7 @@ func main() {
 	f.BoolVarP(&verbose, "verbose", "v", false, "enable verbose output")
 
 	rootCmd.AddCommand(genKeyCmd)
+	rootCmd.AddCommand(genConfigCmd)
 	rootCmd.AddCommand(exchangeConfigCmd)
 	rootCmd.AddCommand(exchangeCmd)
 	rootCmd.AddCommand(validateCmd)
