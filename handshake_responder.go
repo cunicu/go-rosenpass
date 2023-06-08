@@ -27,7 +27,7 @@ func (hs *responderHandshake) handleInitHello(h *initHello) error {
 
 	// IHR5: Key encapsulation using the responder’s public key. Mixes public key, shared
 	//       secret, and ciphertext into the chaining key, and authenticates the responder.
-	err := hs.decapAndMix(kemAlgStatic, hs.server.sskm[:], hs.server.spkm[:], h.sctr[:])
+	err := hs.decapAndMix(kemStatic, hs.server.sskm[:], hs.server.spkm[:], h.sctr[:])
 	if err != nil {
 		return fmt.Errorf("failed to decapsulate (IHR5): %w", err)
 	}
@@ -69,14 +69,14 @@ func (hs *responderHandshake) sendRespHello() error {
 	hs.mix(hs.sidr[:], hs.sidi[:])
 
 	// RHR4: Key encapsulation using the ephemeral key, to provide forward secrecy.
-	ecti, err := hs.encapAndMix(kemAlgEphemeral, hs.epki[:])
+	ecti, err := hs.encapAndMix(kemEphemeral, hs.epki[:])
 	if err != nil {
 		return fmt.Errorf("failed to encapsulate (RHR4): %w", err)
 	}
 
 	// RHR5: Key encapsulation using the initiator’s static key, to authenticate the
 	//       initiator, and non-forward-secret confidentiality.
-	scti, err := hs.encapAndMix(kemAlgStatic, hs.peer.spkt[:])
+	scti, err := hs.encapAndMix(kemStatic, hs.peer.spkt[:])
 	if err != nil {
 		return fmt.Errorf("failed to encapsulate (RHR5): %w", err)
 	}

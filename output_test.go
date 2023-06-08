@@ -13,7 +13,7 @@ import (
 func TestOutput(t *testing.T) {
 	require := require.New(t)
 
-	_, spk, err := rp.GenerateKeyPair()
+	spk, _, err := rp.GenerateKeyPair()
 	require.NoError(err)
 
 	koExpected := rp.KeyOutput{

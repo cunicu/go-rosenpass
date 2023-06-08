@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2023 Steffen Vogel <post@steffenvogel.de>
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build cgo
+
 package rosenpass
 
 import (
@@ -15,6 +17,6 @@ import (
 func TestLibOQS(t *testing.T) {
 	require := require.New(t)
 
-	require.True(oqs.IsKEMEnabled(kemAlgEphemeral))
-	require.True(oqs.IsKEMEnabled(kemAlgStatic))
+	require.True(oqs.IsKEMEnabled(kemEphemeral))
+	require.True(oqs.IsKEMEnabled(kemStatic))
 }

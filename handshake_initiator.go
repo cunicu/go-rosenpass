@@ -40,7 +40,7 @@ func (hs *initiatorHandshake) sendInitHello() (*initHello, error) {
 	}
 
 	// IHI3: Generate fresh ephemeral keys, for forward secrecy.
-	if hs.eski, hs.epki, err = generateKeyPair(kemAlgEphemeral); err != nil {
+	if hs.epki, hs.eski, err = generateEphemeralKeyPair(); err != nil {
 		return nil, err
 	}
 
@@ -50,7 +50,7 @@ func (hs *initiatorHandshake) sendInitHello() (*initHello, error) {
 
 	// IHI5: Key encapsulation using the responder’s public key. Mixes public key, shared
 	//       secret, and ciphertext into the chaining key, and authenticates the responder.
-	sctr, err := hs.encapAndMix(kemAlgStatic, hs.peer.spkt[:])
+	sctr, err := hs.encapAndMix(kemStatic, hs.peer.spkt[:])
 	if err != nil {
 		return nil, err
 	}
@@ -97,13 +97,13 @@ func (hs *initiatorHandshake) handleRespHello(r *respHello) error {
 	hs.mix(hs.sidr[:], hs.sidi[:])
 
 	// RHI4: Key encapsulation using the ephemeral key, to provide forward secrecy.
-	if err := hs.decapAndMix(kemAlgEphemeral, hs.eski[:], hs.epki[:], r.ecti[:]); err != nil {
+	if err := hs.decapAndMix(kemEphemeral, hs.eski[:], hs.epki[:], r.ecti[:]); err != nil {
 		return fmt.Errorf("failed to decapsulate (RHI4): %w", err)
 	}
 
 	// RHI5: Key encapsulation using the initiator’s static key, to authenticate the
 	//       initiator, and non-forward-secret confidentiality.
-	if err := hs.decapAndMix(kemAlgStatic, hs.server.sskm[:], hs.server.spkm[:], r.scti[:]); err != nil {
+	if err := hs.decapAndMix(kemStatic, hs.server.sskm[:], hs.server.spkm[:], r.scti[:]); err != nil {
 		return fmt.Errorf("failed to decapsulate (RHI5): %w", err)
 	}
 

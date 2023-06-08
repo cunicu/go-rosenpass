@@ -88,10 +88,10 @@ func testHandshake(t *testing.T, newAlice, newBob func(*testing.T, string, rp.Co
 	psk, err := rp.GeneratePresharedKey()
 	require.NoError(err)
 
-	secretKeyAlice, publicKeyAlice, err := rp.GenerateKeyPair()
+	publicKeyAlice, secretKeyAlice, err := rp.GenerateKeyPair()
 	require.NoError(err)
 
-	secretKeyBob, publicKeyBob, err := rp.GenerateKeyPair()
+	publicKeyBob, secretKeyBob, err := rp.GenerateKeyPair()
 	require.NoError(err)
 
 	// Generate configurations

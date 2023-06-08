@@ -8,19 +8,18 @@ import (
 	"crypto/rand"
 	"fmt"
 
-	"github.com/open-quantum-safe/liboqs-go/oqs"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/chacha20poly1305"
 )
 
-const (
-	kemAlgStatic    = "Classic-McEliece-460896"
-	kemAlgEphemeral = "Kyber512"
-)
+type keyEncapsulation interface {
+	EncapSecret(pk []byte) (ct []byte, ss []byte, err error)
+	DecapSecret(ct []byte) (ss []byte, err error)
+}
 
 // Generate a new Classic McEliece key pair
-func GenerateKeyPair() (ssk ssk, spk spk, err error) {
-	return generateKeyPair(kemAlgStatic)
+func GenerateKeyPair() (spk, ssk, error) {
+	return generateStaticKeyPair()
 }
 
 // Generates a new pre-shared key
@@ -71,32 +70,6 @@ func newAEAD(k key) (cipher.AEAD, error) {
 
 func newXAEAD(k key) (cipher.AEAD, error) {
 	return chacha20poly1305.NewX(k[:])
-}
-
-func newKEM(alg string, key []byte) (*oqs.KeyEncapsulation, error) {
-	kem := &oqs.KeyEncapsulation{}
-
-	if err := kem.Init(alg, key); err != nil {
-		return nil, err
-	}
-
-	return kem, nil
-}
-
-func generateKeyPair(alg string) ([]byte, []byte, error) {
-	kem := &oqs.KeyEncapsulation{}
-	if err := kem.Init(alg, nil); err != nil {
-		return nil, nil, err
-	}
-
-	pk, err := kem.GenerateKeyPair()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	sk := kem.ExportSecretKey()
-
-	return sk, pk, nil
 }
 
 func generateSessionID() (sid, error) {

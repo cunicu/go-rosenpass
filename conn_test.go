@@ -13,7 +13,7 @@ import (
 func TestUDPConn(t *testing.T) {
 	require := require.New(t)
 
-	_, spk, err := generateKeyPair(kemAlgStatic)
+	spk, _, err := generateStaticKeyPair()
 	require.NoError(err)
 
 	p := &peer{
