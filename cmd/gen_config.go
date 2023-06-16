@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	rp "github.com/stv0g/go-rosenpass"
 	"github.com/stv0g/go-rosenpass/config"
 )
 
@@ -20,6 +21,9 @@ func genConfig(cmd *cobra.Command, args []string) error {
 
 	ep := "my-peer.test:9999"
 	ko := "rp-key-out"
+
+	var pk rp.Key
+	pk.UnmarshalText([]byte("5ShoTnBEXOGC6kkZklj1+ZGCrZxcsgbJFE03tR6auDU=")) //nolint:errcheck
 
 	cfgFile := config.File{
 		PublicKey: "rp-public-key",
@@ -40,7 +44,7 @@ func genConfig(cmd *cobra.Command, args []string) error {
 				},
 				WireGuard: &config.WireGuardSection{
 					Interface: "wg0",
-					PublicKey: "5ShoTnBEXOGC6kkZklj1+ZGCrZxcsgbJFE03tR6auDU=",
+					PublicKey: pk,
 				},
 			},
 		},
