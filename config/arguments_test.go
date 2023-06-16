@@ -18,8 +18,8 @@ func TestArguments(t *testing.T) {
 		"private-key", "sk",
 		"listen", "lst",
 		"verbose",
-		"peer", "public-key", "a_pk", "preshared-key", "a_psk", "endpoint", "a_ep", "outfile", "a_of", "wireguard", "a_wg", "a_wg_pk",
-		"peer", "public-key", "b_pk", "preshared-key", "b_psk", "endpoint", "b_ep", "outfile", "b_of", "wireguard", "b_wg", "b_wg_pk",
+		"peer", "public-key", "a_pk", "preshared-key", "a_psk", "endpoint", "a_ep", "outfile", "a_of", "wireguard", "a_wg", "jm0556G9mvQB8ZG7FdNR4SaLRc83VVoyTG2D9NWecS4=",
+		"peer", "public-key", "b_pk", "preshared-key", "b_psk", "endpoint", "b_ep", "outfile", "b_of", "wireguard", "b_wg", "0oXsRjHLMaWXfDDaWQEHpyCvXA6XsfMv1A8aV2k0ZSo=",
 	})
 	require.NoError(err)
 	require.Empty(args)
@@ -31,23 +31,28 @@ func TestArguments(t *testing.T) {
 
 	require.Len(cfg.Peers, 2)
 
-	for pfx, p := range map[string]config.PeerSection{
-		"a_": cfg.Peers[0],
-		"b_": cfg.Peers[1],
+	for peer, p := range map[string]config.PeerSection{
+		"a": cfg.Peers[0],
+		"b": cfg.Peers[1],
 	} {
-		require.Equal(pfx+"pk", p.PublicKey)
+		require.Equal(peer+"_pk", p.PublicKey)
 
 		require.NotNil(p.PresharedKey)
-		require.Equal(pfx+"psk", *p.PresharedKey)
+		require.Equal(peer+"_psk", *p.PresharedKey)
 
 		require.NotNil(p.Endpoint)
-		require.Equal(pfx+"ep", *p.Endpoint)
+		require.Equal(peer+"_ep", *p.Endpoint)
 
 		require.NotNil(p.KeyOut)
-		require.Equal(pfx+"of", *p.KeyOut)
+		require.Equal(peer+"_of", *p.KeyOut)
 
 		require.NotNil(p.WireGuard)
-		require.Equal(pfx+"wg", p.WireGuard.Interface)
-		require.Equal(pfx+"wg_pk", p.WireGuard.PublicKey)
+		require.Equal(peer+"_wg", p.WireGuard.Interface)
+
+		if peer == "a" {
+			require.Equal("jm0556G9mvQB8ZG7FdNR4SaLRc83VVoyTG2D9NWecS4=", p.WireGuard.PublicKey.String())
+		} else {
+			require.Equal("0oXsRjHLMaWXfDDaWQEHpyCvXA6XsfMv1A8aV2k0ZSo=", p.WireGuard.PublicKey.String())
+		}
 	}
 }
