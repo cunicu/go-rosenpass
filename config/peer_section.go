@@ -19,7 +19,7 @@ type WireGuardSection struct {
 	Interface string `toml:"interface"`
 
 	// The peers WireGuard (not Rosenpass') PublicKey
-	PublicKey string `toml:"public_key"`
+	PublicKey rp.Key `toml:"public_key"`
 }
 
 type PeerSection struct {
@@ -51,10 +51,8 @@ func (f *PeerSection) ToConfig() (pc rosenpass.PeerConfig, err error) {
 		if k, err := os.ReadFile(*f.PresharedKey); err != nil {
 			return pc, fmt.Errorf("failed to read public key: %w", err)
 		} else {
-			if psk, err := base64.StdEncoding.DecodeString(string(k)); err != nil {
+			if err := pc.PresharedKey.UnmarshalText(k); err != nil {
 				return pc, fmt.Errorf("failed to parse preshared key: %w", err)
-			} else {
-				pc.PresharedKey = rp.Key(psk)
 			}
 		}
 	}

@@ -6,6 +6,8 @@ package config
 import (
 	"errors"
 	"fmt"
+
+	rp "github.com/stv0g/go-rosenpass"
 )
 
 var (
@@ -145,9 +147,14 @@ func PeerConfigFromArgs(args []string) (_ []string, cfg PeerSection, err error) 
 			peer, args = pop(args)
 			_, args = popUntil(args, "peer") // ExtraArgs are ignored for now
 
+			var pk rp.Key
+			if err := pk.UnmarshalText([]byte(peer)); err != nil {
+				return nil, cfg, fmt.Errorf("invalid public peer key '%s': %w", peer, err)
+			}
+
 			cfg.WireGuard = &WireGuardSection{
 				Interface: dev,
-				PublicKey: peer,
+				PublicKey: pk,
 			}
 
 		default:

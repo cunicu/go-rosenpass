@@ -142,5 +142,17 @@ func (p sid) String() string {
 }
 
 func (p key) String() string {
-	return base64.StdEncoding.EncodeToString(p[:])
+	t, _ := p.MarshalText() //nolint:errcheck
+	return string(t)
+}
+
+func (k *key) UnmarshalText(text []byte) error {
+	_, err := base64.StdEncoding.Decode(k[:], text)
+	return err
+}
+
+func (k key) MarshalText() (text []byte, err error) {
+	b := make([]byte, base64.StdEncoding.EncodedLen(keySize))
+	base64.StdEncoding.Encode(b, k[:])
+	return b, nil
 }
