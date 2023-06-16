@@ -14,6 +14,14 @@ import (
 	rp "github.com/stv0g/go-rosenpass"
 )
 
+type WireGuardSection struct {
+	// The peers network interface name
+	Interface string `toml:"interface"`
+
+	// The peers WireGuard (not Rosenpass') PublicKey
+	PublicKey string `toml:"public_key"`
+}
+
 type PeerSection struct {
 	// The peer’s public key
 	PublicKey string `toml:"public_key" comment:"The peer’s public key"`
@@ -30,7 +38,8 @@ type PeerSection struct {
 	// A command which is executed after each completed handshake
 	ExchangeCommand []string `toml:"exchange_command,multiline,omitempty" comment:"A command which is executed after each completed handshake"`
 
-	ExchangeCommand []string `toml:"exchange_command,multiline,omitempty"`
+	// Settings for directly configuring a WireGuard peer with the negotiated PSK
+	WireGuard *WireGuardSection `toml:"wireguard,inline" comment:"Settings for directly configuring a WireGuard peer with the negotiated PSK"`
 }
 
 func (f *PeerSection) ToConfig() (pc rosenpass.PeerConfig, err error) {

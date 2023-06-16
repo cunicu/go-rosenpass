@@ -18,8 +18,8 @@ func TestArguments(t *testing.T) {
 		"private-key", "sk",
 		"listen", "lst",
 		"verbose",
-		"peer", "public-key", "a_pk", "preshared-key", "a_psk", "endpoint", "a_ep", "outfile", "a_of", "wireguard", "a_wg", "a_wg_pk", "a_wg_extra",
-		"peer", "public-key", "b_pk", "preshared-key", "b_psk", "endpoint", "b_ep", "outfile", "b_of", "wireguard", "b_wg", "b_wg_pk", "b_wg_extra",
+		"peer", "public-key", "a_pk", "preshared-key", "a_psk", "endpoint", "a_ep", "outfile", "a_of", "wireguard", "a_wg", "a_wg_pk",
+		"peer", "public-key", "b_pk", "preshared-key", "b_psk", "endpoint", "b_ep", "outfile", "b_of", "wireguard", "b_wg", "b_wg_pk",
 	})
 	require.NoError(err)
 	require.Empty(args)
@@ -46,6 +46,8 @@ func TestArguments(t *testing.T) {
 		require.NotNil(p.KeyOut)
 		require.Equal(pfx+"of", *p.KeyOut)
 
-		require.Equal([]string{"wg", "set", pfx + "wg", "peer", pfx + "wg_pk", "preshared-key", "/dev/stdin", pfx + "wg_extra"}, p.ExchangeCommand)
+		require.NotNil(p.WireGuard)
+		require.Equal(pfx+"wg", p.WireGuard.Interface)
+		require.Equal(pfx+"wg_pk", p.WireGuard.PublicKey)
 	}
 }
