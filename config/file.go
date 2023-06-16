@@ -96,12 +96,14 @@ func (f *File) ToConfig() (c rp.Config, err error) {
 		return c, fmt.Errorf("failed to read public key: %w", err)
 	}
 
-	ch := &exchangeCommandHandler{
-		peers: map[rp.PeerID][]string{},
+	ch := newExchangeCommandHandler()
+	kh := newkeyoutHandler()
+	wh, err := newWireGuardHandler()
+	if err != nil {
+		return c, fmt.Errorf("failed to configure WireGuard interfaces: %w", err)
 	}
-	kh := &keyoutFileHandler{
-		peers: map[rp.PeerID]string{},
-	}
+
+	c.Handlers = append(c.Handlers, kh, ch, wh)
 
 	for _, p := range f.Peers {
 		if pc, err := p.ToConfig(); err != nil {
@@ -121,10 +123,12 @@ func (f *File) ToConfig() (c rp.Config, err error) {
 			if p.ExchangeCommand != nil {
 				ch.addPeerCommand(pid, p.ExchangeCommand)
 			}
+
+			if p.WireGuard != nil {
+				wh.addPeer(pid, *p.WireGuard)
+			}
 		}
 	}
-
-	c.Handlers = append(c.Handlers, kh)
 
 	return c, nil
 }
