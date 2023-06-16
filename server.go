@@ -292,7 +292,7 @@ func (s *Server) initiateHandshake(p *peer) {
 }
 
 func (s *Server) completeHandshake(hs *handshake, rekeyAfter time.Duration) {
-	hs.peer.logger.Debug("Handshake completed")
+	hs.peer.logger.Debug("Exchanged key with peer")
 
 	for _, h := range s.handlers {
 		if h, ok := h.(HandshakeCompletedHandler); ok {
@@ -314,7 +314,7 @@ func (s *Server) completeHandshake(hs *handshake, rekeyAfter time.Duration) {
 }
 
 func (s *Server) expireHandshake(hs *handshake) {
-	hs.peer.logger.Debug("Handshake expired")
+	hs.peer.logger.Debug("Erasing outdated key from peer")
 
 	s.handshakesLock.Lock()
 	delete(s.handshakes, hs.sidi)
