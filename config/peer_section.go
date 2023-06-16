@@ -16,15 +16,19 @@ import (
 
 type PeerSection struct {
 	// The peer’s public key
-	PublicKey string `toml:"public_key"`
+	PublicKey string `toml:"public_key" comment:"The peer’s public key"`
 
 	// The peers's endpoint
-	Endpoint *string `toml:"endpoint"`
+	Endpoint *string `toml:"endpoint" comment:"The peers's endpoint"`
 
 	// The peer's pre-shared key
-	PresharedKey *string `toml:"pre_shared_key"`
+	PresharedKey *string `toml:"pre_shared_key" comment:"The peer's pre-shared key"`
 
-	KeyOut *string `toml:"key_out"`
+	// A path to a file to which we will write the base64-encoded PSK after each handshake
+	KeyOut *string `toml:"key_out" comment:"A path to a file to which we will write the base64-encoded PSK after each handshake"`
+
+	// A command which is executed after each completed handshake
+	ExchangeCommand []string `toml:"exchange_command,multiline,omitempty" comment:"A command which is executed after each completed handshake"`
 
 	ExchangeCommand []string `toml:"exchange_command,multiline,omitempty"`
 }

@@ -16,13 +16,20 @@ import (
 )
 
 type File struct {
-	PublicKey string `toml:"public_key"`
-	SecretKey string `toml:"secret_key"`
+	// A filename containing this nodes raw public key
+	PublicKey string `toml:"public_key" comment:"A filename containing this nodes raw public key"`
 
-	Listen    []string `toml:"listen,omitempty"`
-	Verbosity string   `toml:"verbosity,omitempty"`
+	// A filename containing this nodes raw secret key
+	SecretKey string `toml:"secret_key" comment:"A filename containing this nodes raw secret key"`
 
-	Peers []PeerSection `toml:"peers,omitempty"`
+	// A host:port pair to identify the interface and port to listen for handshake messages
+	Listen []string `toml:"listen,omitempty" comment:"A host:port pair to identify the interface and port to listen for handshake messages"`
+
+	// Set to 'Verbose' or 'Quiet'
+	Verbosity string `toml:"verbosity,omitempty" comment:"Set to 'Verbose' or 'Quiet'"`
+
+	// A table of peers
+	Peers []PeerSection `toml:"peers,omitempty" comment:"A table of peers"`
 }
 
 func (c *File) Load(r io.Reader) error {
