@@ -38,6 +38,10 @@ func genConfig(cmd *cobra.Command, args []string) error {
 					"preshared-key",
 					"/dev/stdin",
 				},
+				WireGuard: &config.WireGuardSection{
+					Interface: "wg0",
+					PublicKey: "5ShoTnBEXOGC6kkZklj1+ZGCrZxcsgbJFE03tR6auDU=",
+				},
 			},
 		},
 	}

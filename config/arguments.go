@@ -140,14 +140,15 @@ func PeerConfigFromArgs(args []string) (_ []string, cfg PeerSection, err error) 
 			}
 
 			var dev, peer string
-			var extraArgs []string
 
 			dev, args = pop(args)
 			peer, args = pop(args)
-			extraArgs, args = popUntil(args, "peer")
+			_, args = popUntil(args, "peer") // ExtraArgs are ignored for now
 
-			cfg.ExchangeCommand = []string{"wg", "set", dev, "peer", peer, "preshared-key", "/dev/stdin"}
-			cfg.ExchangeCommand = append(cfg.ExchangeCommand, extraArgs...)
+			cfg.WireGuard = &WireGuardSection{
+				Interface: dev,
+				PublicKey: peer,
+			}
 
 		default:
 			return nil, cfg, fmt.Errorf("invalid argument: %s", arg)
