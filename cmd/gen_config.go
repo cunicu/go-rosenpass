@@ -22,8 +22,10 @@ func genConfig(cmd *cobra.Command, args []string) error {
 	ep := "my-peer.test:9999"
 	ko := "rp-key-out"
 
-	var pk rp.Key
-	pk.UnmarshalText([]byte("5ShoTnBEXOGC6kkZklj1+ZGCrZxcsgbJFE03tR6auDU=")) //nolint:errcheck
+	pk, err := rp.GeneratePresharedKey()
+	if err != nil {
+		return fmt.Errorf("failed to generate key: %w", err)
+	}
 
 	cfgFile := config.File{
 		PublicKey: "rp-public-key",
