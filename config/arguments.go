@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	rp "github.com/stv0g/go-rosenpass"
+	"golang.org/x/exp/slog"
 )
 
 var (
@@ -38,6 +39,10 @@ func ConfigFromArgs(args []string) (_ []string, cfg File, err error) {
 		arg, args = pop(args)
 		switch arg {
 		case "private-key":
+			slog.Warn("the private-key argument is deprecated, please use secret-key instead")
+			fallthrough
+
+		case "secret-key":
 			if len(args) < 1 {
 				return nil, cfg, fmt.Errorf("truncated arguments: missing private-key <file-path>")
 			}
