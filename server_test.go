@@ -111,9 +111,11 @@ func testHandshake(t *testing.T, newAlice, newBob func(*testing.T, string, rp.Co
 	cfgAlice := rp.Config{
 		PublicKey: publicKeyAlice,
 		SecretKey: secretKeyAlice,
-		Listen: &net.UDPAddr{
-			IP:   net.IPv6loopback,
-			Port: portAlice,
+		ListenAddrs: []*net.UDPAddr{
+			{
+				IP:   net.IPv6loopback,
+				Port: portAlice,
+			},
 		},
 		Peers: []rp.PeerConfig{
 			{
@@ -132,9 +134,11 @@ func testHandshake(t *testing.T, newAlice, newBob func(*testing.T, string, rp.Co
 	cfgBob := rp.Config{
 		PublicKey: publicKeyBob,
 		SecretKey: secretKeyBob,
-		Listen: &net.UDPAddr{
-			IP:   net.IPv6loopback,
-			Port: portBob,
+		ListenAddrs: []*net.UDPAddr{
+			{
+				IP:   net.IPv6loopback,
+				Port: portBob,
+			},
 		},
 		Peers: []rp.PeerConfig{
 			{

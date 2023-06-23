@@ -16,28 +16,36 @@ type endpoint interface {
 	Equal(endpoint) bool
 }
 
+type receiveFunc func(spkm spk) (payload, *net.UDPAddr, error)
+
 type conn interface {
-	Send(pl payload, p *peer) error
-	Receive(spkm spk) (payload, *net.UDPAddr, error)
 	Close() error
+	Open() ([]receiveFunc, error)
+	Send(pl payload, p *peer) error
 }
 
 type udpConn struct {
-	conn *net.UDPConn
+	listenAddrs []*net.UDPAddr
+	conns       map[string]*net.UDPConn
 
 	logger *slog.Logger
 }
 
-func newUDPConn(la *net.UDPAddr) (*udpConn, error) {
-	conn, err := net.ListenUDP("udp", la)
-	if err != nil {
-		return nil, fmt.Errorf("failed to listen: %w", err)
-	}
-
+func newUDPConn(la []*net.UDPAddr) (*udpConn, error) {
 	return &udpConn{
-		conn:   conn,
-		logger: slog.Default(),
+		listenAddrs: la,
+		conns:       map[string]*net.UDPConn{},
+		logger:      slog.Default(),
 	}, nil
+}
+
+func (s *udpConn) Close() error {
+	for _, conn := range s.conns {
+		if err := conn.Close(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *udpConn) Send(pl payload, p *peer) error {
@@ -56,8 +64,20 @@ func (s *udpConn) Send(pl payload, p *peer) error {
 		e.typ = msgTypeEmptyData
 	}
 
+	network := networkFromAddr(p.endpoint)
+
+	// Check if we are on DragonFly or OpenBSD systems
+	// which require two independent sockets for listening
+	// on IPv4 and IPv6 simultaneously
+	conn, ok := s.conns[network]
+	if !ok {
+		if conn, ok = s.conns["udp"]; !ok { // Fallback
+			return fmt.Errorf("failed to find socket with matching address family")
+		}
+	}
+
 	buf := e.MarshalBinaryAndSeal(p.spkt)
-	if n, err := s.conn.WriteToUDP(buf, p.endpoint); err != nil {
+	if n, err := conn.WriteToUDP(buf, p.endpoint); err != nil {
 		return err
 	} else if n != len(buf) {
 		return fmt.Errorf("partial write")
@@ -66,27 +86,22 @@ func (s *udpConn) Send(pl payload, p *peer) error {
 	return nil
 }
 
-func (s *udpConn) Receive(spkm spk) (payload, *net.UDPAddr, error) {
-	// TODO: Check for appropriate MTU
-	buf := make([]byte, 1500)
+func (s *udpConn) open(networks map[string]*net.UDPAddr) ([]receiveFunc, error) {
+	recvFncs := []receiveFunc{}
 
-	n, from, err := s.conn.ReadFromUDP(buf)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to read: %w", err)
+	for network, listenAddr := range networks {
+		conn, err := net.ListenUDP(network, listenAddr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to listen: %w", err)
+		}
+
+		s.logger.Debug("Started listening", slog.Any("addr", listenAddr))
+
+		s.conns[network] = conn
+		recvFncs = append(recvFncs, receiveFromConn(conn))
 	}
 
-	e := &envelope{}
-	if m, err := e.CheckAndUnmarshalBinary(buf[:n], spkm); err != nil {
-		return nil, nil, fmt.Errorf("received malformed packet: %w", err)
-	} else if m != n {
-		return nil, nil, fmt.Errorf("parsed partial packet")
-	}
-
-	return e.payload, from, nil
-}
-
-func (s *udpConn) Close() error {
-	return s.conn.Close()
+	return recvFncs, nil
 }
 
 func compareAddr(a, b *net.UDPAddr) bool {
@@ -99,4 +114,37 @@ func compareAddr(a, b *net.UDPAddr) bool {
 	}
 
 	return true
+}
+
+func networkFromAddr(a *net.UDPAddr) string {
+	if a.IP == nil {
+		return "udp"
+	} else {
+		if isIPv4 := a.IP.To4() != nil; isIPv4 {
+			return "udp4"
+		} else {
+			return "udp6"
+		}
+	}
+}
+
+func receiveFromConn(conn *net.UDPConn) receiveFunc {
+	return func(spkm spk) (payload, *net.UDPAddr, error) {
+		// TODO: Check for appropriate MTU
+		buf := make([]byte, 1500)
+
+		n, from, err := conn.ReadFromUDP(buf)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to read: %w", err)
+		}
+
+		e := &envelope{}
+		if m, err := e.CheckAndUnmarshalBinary(buf[:n], spkm); err != nil {
+			return nil, nil, fmt.Errorf("received malformed packet: %w", err)
+		} else if m != n {
+			return nil, nil, fmt.Errorf("parsed partial packet")
+		}
+
+		return e.payload, from, nil
+	}
 }

@@ -24,21 +24,28 @@ func TestUDPConn(t *testing.T) {
 		},
 	}
 
-	c, err := newUDPConn(&net.UDPAddr{
-		Port: 1234,
+	c, err := newUDPConn([]*net.UDPAddr{
+		{
+			Port: 1234,
+		},
 	})
 	require.NoError(err)
 
 	sid, err := generateSessionID()
 	require.NoError(err)
 
-	pls := make(chan payload)
-	go func() {
-		pl, _, err := c.Receive(spk)
-		require.NoError(err)
+	recvFncs, err := c.Open()
+	require.NoError(err)
 
-		pls <- pl
-	}()
+	pls := make(chan payload)
+	for _, recvFnc := range recvFncs {
+		go func(recvFnc receiveFunc) {
+			pl, _, err := recvFnc(spk)
+			require.NoError(err)
+
+			pls <- pl
+		}(recvFnc)
+	}
 
 	eds := &emptyData{
 		sid: sid,

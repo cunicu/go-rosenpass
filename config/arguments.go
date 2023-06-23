@@ -63,7 +63,7 @@ func ConfigFromArgs(args []string) (_ []string, cfg File, err error) {
 
 			var lst string
 			lst, args = pop(args)
-			cfg.Listen = append(cfg.Listen, lst)
+			cfg.ListenAddrs = append(cfg.ListenAddrs, lst)
 
 		case "verbose":
 			cfg.Verbosity = "Verbose"

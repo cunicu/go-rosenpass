@@ -26,7 +26,7 @@ func TestArguments(t *testing.T) {
 
 	require.Equal("pk", cfg.PublicKey)
 	require.Equal("sk", cfg.SecretKey)
-	require.Equal([]string{"lst"}, cfg.Listen)
+	require.Equal([]string{"lst"}, cfg.ListenAddrs)
 	require.Equal("Verbose", cfg.Verbosity)
 
 	require.Len(cfg.Peers, 2)

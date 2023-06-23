@@ -32,13 +32,13 @@ type Server struct {
 }
 
 func NewUDPServer(cfg Config) (*Server, error) {
-	if cfg.Listen == nil {
+	if len(cfg.ListenAddrs) == 0 {
 		// Listen on random port on all interfaces by default
-		cfg.Listen = &net.UDPAddr{}
+		cfg.ListenAddrs = append(cfg.ListenAddrs, &net.UDPAddr{})
 	}
 
 	var err error
-	if cfg.Conn, err = newUDPConn(cfg.Listen); err != nil {
+	if cfg.Conn, err = newUDPConn(cfg.ListenAddrs); err != nil {
 		return nil, err
 	}
 
@@ -72,6 +72,11 @@ func NewServer(cfg Config) (*Server, error) {
 		s.logger = slog.Default()
 	}
 
+	recvFncs, err := s.conn.Open()
+	if err != nil {
+		return nil, fmt.Errorf("failed to open listeners: %w", err)
+	}
+
 	for _, pCfg := range cfg.Peers {
 		p, err := s.newPeer(&pCfg)
 		if err != nil {
@@ -83,7 +88,10 @@ func NewServer(cfg Config) (*Server, error) {
 		s.peers[p.PID()] = p
 	}
 
-	go s.receiveLoop()
+	for _, recvFnc := range recvFncs {
+		go s.receiveLoop(recvFnc)
+	}
+
 	go s.biscuitLoop()
 
 	return s, nil
@@ -119,9 +127,9 @@ func (s *Server) Run() error {
 	return nil
 }
 
-func (s *Server) receiveLoop() {
+func (s *Server) receiveLoop(recvFnc receiveFunc) {
 	for {
-		pl, from, err := s.conn.Receive(s.spkm)
+		pl, from, err := recvFnc(s.spkm)
 		if err != nil {
 			if errors.Is(err, net.ErrClosed) {
 				return

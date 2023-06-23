@@ -12,7 +12,6 @@ import (
 
 	"github.com/pelletier/go-toml/v2"
 	rp "github.com/stv0g/go-rosenpass"
-	"golang.org/x/exp/slog"
 )
 
 type File struct {
@@ -23,7 +22,7 @@ type File struct {
 	SecretKey string `toml:"secret_key" comment:"A filename containing this nodes raw secret key"`
 
 	// A host:port pair to identify the interface and port to listen for handshake messages
-	Listen []string `toml:"listen,omitempty" comment:"A host:port pair to identify the interface and port to listen for handshake messages"`
+	ListenAddrs []string `toml:"listen,omitempty" comment:"A host:port pair to identify the interface and port to listen for handshake messages"`
 
 	// Set to 'Verbose' or 'Quiet'
 	Verbosity string `toml:"verbosity,omitempty" comment:"Set to 'Verbose' or 'Quiet'"`
@@ -77,15 +76,13 @@ func (f *File) DumpFile(fn string) error {
 }
 
 func (f *File) ToConfig() (c rp.Config, err error) {
-	for _, las := range f.Listen {
-		if c.Listen, err = net.ResolveUDPAddr("udp", las); err != nil {
+	for _, las := range f.ListenAddrs {
+		addr, err := net.ResolveUDPAddr("udp", las)
+		if err != nil {
 			return c, fmt.Errorf("failed to resolve listen address: %w", err)
 		}
 
-		if len(f.Listen) > 1 {
-			slog.Warn("Only first listen address is used!")
-			break
-		}
+		c.ListenAddrs = append(c.ListenAddrs, addr)
 	}
 
 	if c.PublicKey, err = os.ReadFile(f.PublicKey); err != nil {
@@ -136,9 +133,9 @@ func (f *File) ToConfig() (c rp.Config, err error) {
 func (f *File) FromConfig(c rp.Config, dir string) (err error) {
 	f.Verbosity = "Verbose" // TODO: Make configurable
 
-	if c.Listen != nil {
-		f.Listen = []string{
-			c.Listen.String(),
+	if c.ListenAddrs != nil {
+		for _, la := range c.ListenAddrs {
+			f.ListenAddrs = append(f.ListenAddrs, la.String())
 		}
 	}
 
