@@ -28,6 +28,7 @@ func genConfig(cmd *cobra.Command, args []string) error {
 	cfgFile := config.File{
 		PublicKey: "rp-public-key",
 		SecretKey: "rp-secret-key",
+		Verbosity: "Verbose",
 		Peers: []config.PeerSection{
 			{
 				PublicKey: "rp-peer-public-key",
