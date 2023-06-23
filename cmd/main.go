@@ -30,6 +30,9 @@ var (
 		Short:         "Rosenpass is a formally verified, post-quantum secure VPN that uses WireGuard to transport the actual data.",
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			setupLogging(verbose)
+		},
 	}
 
 	manCmd = &cobra.Command{
@@ -49,9 +52,6 @@ var (
 		Use:   "validate [flags] config-files...",
 		Short: "Validate a configuration",
 		RunE:  validate,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			setupLogging(verbose)
-		},
 	}
 
 	genKeyCmd = &cobra.Command{
@@ -60,9 +60,6 @@ var (
 		Long:  "Send the public-key file to your communication partner and keep the secret-key file a secret!",
 		Args:  cobra.MaximumNArgs(1),
 		RunE:  genKey,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			setupLogging(verbose)
-		},
 	}
 
 	genManCmd = &cobra.Command{
@@ -77,9 +74,6 @@ var (
 		Short: "Generate a demo config file",
 		Args:  cobra.ExactArgs(1),
 		RunE:  genConfig,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			setupLogging(verbose)
-		},
 	}
 
 	exchangeConfigCmd = &cobra.Command{

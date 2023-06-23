@@ -17,7 +17,9 @@ func exchange(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to parse arguments: %s", err)
 	}
 
-	setupLogging(cfgFile.Verbosity == "Verbose")
+	if cfgFile.Verbosity != "" {
+		setupLogging(cfgFile.Verbosity == "Verbose")
+	}
 
 	return doExchange(cfgFile)
 }
@@ -30,7 +32,9 @@ func exchangeConfig(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	setupLogging(cfgFile.Verbosity == "Verbose")
+	if cfgFile.Verbosity != "" {
+		setupLogging(cfgFile.Verbosity == "Verbose")
+	}
 
 	return doExchange(cfgFile)
 }
