@@ -16,6 +16,30 @@ The implementation aims to be compatible with the reference implementation in Ru
 - handshake parameters
 - command-line interface
 
+## Installation
+
+### Pre-build binaries
+
+_go-rosenpass_ distributes builds via [GitHub Releases](https://github.com/stv0g/go-rosenpass/releases).
+You can download a pre-built binary from there.
+
+### Building from source
+
+_go-rosenpass_ requires [liboqs](https://github.com/open-quantum-safe/liboqs) for Post-Quantum crypto primitives.
+Please have a look the [liboqs-go](https://github.com/open-quantum-safe/liboqs-go) bindings for details build instructions.
+
+#### Linking statically against liboqs & libcrypto
+
+In addition to the instruction provided by liboqs-go, its also possible to link _go-rosenpass_ statically against liboqs using the following commands:
+
+```bash
+git clone https://github.com/stv0g/go-rosenpass
+cd go-rosenpass
+PKG_CONFIG_PATH=.config-static go build -o go-rosenpass ./cmd/
+```
+
+The resulting `go-rosenpass` binary can be redistributed without requiring `liboqs.so` or `libcrypto.so` as external dependencies.
+
 ## References
 
 - <https://github.com/rosenpass/rosenpass>
