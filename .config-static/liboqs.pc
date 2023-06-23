@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2023 Steffen Vogel <post@steffenvogel.de>
+# SPDX-License-Identifier: Apache-2.0
+
 LIBOQS_INCLUDE_DIR=/usr/local/include
 LIBOQS_LIB_DIR=/usr/local/lib
 
