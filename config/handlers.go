@@ -102,7 +102,9 @@ type wireGuardHandler struct {
 }
 
 func newWireGuardHandler() (hdlr *wireGuardHandler, err error) {
-	hdlr = &wireGuardHandler{}
+	hdlr = &wireGuardHandler{
+		peers: map[rp.PeerID]WireGuardSection{},
+	}
 
 	if hdlr.client, err = wgctrl.New(); err != nil {
 		return nil, fmt.Errorf("failed to creat WireGuard client: %w", err)
