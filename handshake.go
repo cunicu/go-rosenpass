@@ -121,7 +121,7 @@ func (hs *handshake) decapAndMix(typ kemType, sk, pk, ct []byte) error {
 
 func (hs *handshake) storeBiscuit() (sealedBiscuit, error) {
 	hs.server.biscuitLock.Lock()
-	hs.server.biscuitCtr.Inc(1)
+	hs.server.biscuitCtr.Inc()
 	biscuitNo := hs.server.biscuitCtr
 	biscuitKey := hs.server.biscuitKeys[0]
 	hs.server.biscuitLock.Unlock()
