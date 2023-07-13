@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/open-quantum-safe/liboqs-go v0.0.0-20230705192921-cf9c63b76ce6
-	github.com/pelletier/go-toml/v2 v2.0.8
+	github.com/pelletier/go-toml/v2 v2.0.9
 	github.com/spf13/cobra v1.7.0
 	golang.org/x/crypto v0.11.0
 	golang.org/x/exp v0.0.0-20230711023510-fffb14384f22
