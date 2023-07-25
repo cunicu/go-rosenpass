@@ -7,7 +7,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.0.9
 	github.com/spf13/cobra v1.7.0
 	golang.org/x/crypto v0.11.0
-	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
+	golang.org/x/exp v0.0.0-20230725012225-302865e7556b
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20230429144221-925a1e7659e6
 )
 
