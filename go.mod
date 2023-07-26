@@ -3,7 +3,7 @@ module github.com/stv0g/go-rosenpass
 go 1.20
 
 require (
-	github.com/open-quantum-safe/liboqs-go v0.0.0-20230705192921-cf9c63b76ce6
+	github.com/open-quantum-safe/liboqs-go v0.0.0-20230726174627-a49f79a6b626
 	github.com/pelletier/go-toml/v2 v2.0.9
 	github.com/spf13/cobra v1.7.0
 	golang.org/x/crypto v0.11.0
