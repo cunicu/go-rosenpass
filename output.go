@@ -6,6 +6,7 @@ package rosenpass
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -44,5 +45,10 @@ func ParseKeyOutput(str string) (o KeyOutput, err error) {
 }
 
 func (o KeyOutput) String() string {
-	return fmt.Sprintf("output-key peer %s key-file \"%s\" %s", o.Peer, o.KeyFile, o.Why)
+	return strings.Join([]string{
+		"output-key",
+		"peer", o.Peer.String(),
+		"key-file", strconv.Quote(o.KeyFile),
+		string(o.Why),
+	}, " ")
 }

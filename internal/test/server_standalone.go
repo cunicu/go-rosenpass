@@ -9,11 +9,9 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	rp "github.com/stv0g/go-rosenpass"
 	"github.com/stv0g/go-rosenpass/config"
@@ -71,7 +69,9 @@ func NewStandaloneServer(cfg rp.Config, executable, dir string) (*StandaloneServ
 }
 
 func (s *StandaloneServer) Run() error {
-	log.Printf("Starting %s", strings.Join(s.cmd.Args, " "))
+	slog.Info("Starting",
+		slog.String("path", s.cmd.Path),
+		slog.Any("args", s.cmd.Args))
 
 	return s.cmd.Start()
 }
