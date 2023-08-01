@@ -1,0 +1,14 @@
+---
+
+linters:
+  enable:
+  - forbidigo
+  - gosec
+
+linters-settings:
+
+  forbidigo:
+    forbid:
+    - ^print.*$
+    - ^unsafe$
+    - ^fmt\.(Printf|Scanf|Sprintf|Sscanf)$
