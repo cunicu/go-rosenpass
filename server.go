@@ -78,7 +78,9 @@ func NewServer(cfg Config) (*Server, error) {
 	}
 
 	for _, pCfg := range cfg.Peers {
-		p, err := s.newPeer(&pCfg)
+		pCfg := pCfg
+
+		p, err := s.newPeer(pCfg)
 		if err != nil {
 			return nil, err
 		}
@@ -97,7 +99,7 @@ func NewServer(cfg Config) (*Server, error) {
 	return s, nil
 }
 
-func (s *Server) PID() pid {
+func (s *Server) PID() PeerID { //nolint:revive
 	return pid(khPeerID.hash(s.spkm[:]))
 }
 
@@ -243,6 +245,13 @@ func (s *Server) handle(pl payload, from *net.UDPAddr) error {
 
 		if err = hs.sendEmptyData(); err != nil {
 			return err
+		}
+
+		// Update peers endpoint of the init hello message
+		// has been received from an unknown address.
+		if hs.peer.endpoint == nil || !compareAddr(hs.peer.endpoint, from) {
+			hs.peer.endpoint = from
+			hs.peer.logger.Debug("Learned new endpoint", slog.Any("endpoint", from))
 		}
 
 		s.completeHandshake(&hs.handshake, RekeyAfterTimeResponder)

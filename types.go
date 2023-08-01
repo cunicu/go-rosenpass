@@ -68,22 +68,22 @@ const (
 	oskSize = hashSize // Output-shared key size
 	ckSize  = hashSize // Chaining key size
 
-	// Classic McEliece 460896
+	// Classic McEliece 460896 sizes.
 	sctSize = 188    // Static Cipher-text size
 	spkSize = 524160 // Static public key size
 	sskSize = 13568  // Static secret key size
 
-	// Kyber-512
+	// Kyber-512 sizes.
 	ectSize = 768  // Ephemeral cipher text size
 	epkSize = 800  // Ephemeral public key size
 	eskSize = 1632 // Ephemeral secret key size
 
-	// Envelope
+	// Envelope sizes.
 	macSize      = 16
 	cookieSize   = 16
 	envelopeSize = 4 + macSize + cookieSize
 
-	// Biscuit
+	// Biscuit sizes.
 	biscuitNoSize     = 12
 	biscuitSize       = pidSize + biscuitNoSize + ckSize
 	sealedBiscuitSize = biscuitSize + nonceSizeX + authSize
@@ -115,7 +115,7 @@ type (
 	epk []byte // Ephemeral public key size
 	esk []byte // Ephemeral secret key size
 
-	// Some aliases for the public API
+	// Some aliases for the public API.
 	PeerID = pid
 
 	PresharedKey = key
@@ -124,7 +124,7 @@ type (
 	Key          = key
 )
 
-func ParsePeerID(s string) (pid, error) {
+func ParsePeerID(s string) (pid, error) { //nolint:revive
 	p, err := base64.StdEncoding.DecodeString(s)
 	if err != nil {
 		return pid{}, err
@@ -137,12 +137,12 @@ func (p pid) String() string {
 	return base64.StdEncoding.EncodeToString(p[:])
 }
 
-func (p sid) String() string {
-	return hex.EncodeToString(p[:])
+func (s sid) String() string {
+	return hex.EncodeToString(s[:])
 }
 
-func (p key) String() string {
-	t, _ := p.MarshalText() //nolint:errcheck
+func (k key) String() string {
+	t, _ := k.MarshalText() //nolint:errcheck
 	return string(t)
 }
 

@@ -11,7 +11,7 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-func validate(cmd *cobra.Command, args []string) error {
+func validate(_ *cobra.Command, args []string) error {
 	errors := 0
 	for _, cfgFilename := range args {
 		cfgFile := config.File{}

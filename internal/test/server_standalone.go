@@ -150,7 +150,7 @@ func NewStandaloneGoServer(cfg rp.Config, dir string) (*StandaloneGoServer, erro
 
 	if coverPkg != "" {
 		coverDir = dir
-		s.cmd.Env = append(s.cmd.Env, fmt.Sprintf("GOCOVERDIR=%s", coverDir))
+		s.cmd.Env = append(s.cmd.Env, fmt.Sprintf("GOCOVERDIR=%s", coverDir)) //nolint:forbidigo // This is test code
 	}
 
 	return &StandaloneGoServer{
@@ -167,7 +167,7 @@ func (s *StandaloneGoServer) Close() error {
 	}
 
 	if s.coverDir != "" {
-		output := fmt.Sprintf("coverage-%d.out", pid)
+		output := fmt.Sprintf("coverage-%d.out", pid) //nolint:forbidigo // This is test code
 		if err := s.convertCoverage(output); err != nil {
 			return fmt.Errorf("failed to convert coverage data: %w", err)
 		}
@@ -177,7 +177,9 @@ func (s *StandaloneGoServer) Close() error {
 }
 
 func (s *StandaloneGoServer) convertCoverage(outputFile string) error {
-	c := exec.Command("go", "tool", "covdata", "textfmt", "-i", s.coverDir, "-o", outputFile)
+	c := exec.Command("go", "tool", "covdata", "textfmt", //nolint:gosec
+		"-i", s.coverDir,
+		"-o", outputFile)
 	c.Stderr = os.Stderr
 	c.Stdout = os.Stdout
 

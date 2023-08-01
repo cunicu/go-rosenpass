@@ -13,7 +13,7 @@ import (
 	"github.com/stv0g/go-rosenpass/config"
 )
 
-func genKey(cmd *cobra.Command, args []string) error {
+func genKey(_ *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		cfgFilename := args[0]
 		cfgFile := config.File{}
@@ -43,12 +43,12 @@ func genKey(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := os.WriteFile(pkPath, spk[:], 0o644); err != nil {
-		return err
+	if err := os.WriteFile(pkPath, spk[:], 0o600); err != nil {
+		return fmt.Errorf("failed to write static public key: %w", err)
 	}
 
 	if err := os.WriteFile(skPath, ssk[:], 0o600); err != nil {
-		return err
+		return fmt.Errorf("failed to write static secret key: %w", err)
 	}
 
 	return nil

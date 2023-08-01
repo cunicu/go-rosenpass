@@ -119,13 +119,13 @@ func compareAddr(a, b *net.UDPAddr) bool {
 func networkFromAddr(a *net.UDPAddr) string {
 	if a.IP == nil {
 		return "udp"
-	} else {
-		if isIPv4 := a.IP.To4() != nil; isIPv4 {
-			return "udp4"
-		} else {
-			return "udp6"
-		}
 	}
+
+	if isIPv4 := a.IP.To4() != nil; isIPv4 {
+		return "udp4"
+	}
+
+	return "udp6"
 }
 
 func receiveFromConn(conn *net.UDPConn) receiveFunc {

@@ -122,7 +122,7 @@ func main() {
 
 	if err := rootCmd.Execute(); err != nil {
 		logger.Error("Error", slog.Any("error", err))
-		os.Exit(-1)
+		os.Exit(-1) //nolint:forbidigo // This is the only occurence in the code
 	}
 }
 

@@ -30,9 +30,9 @@ func pop(s []string) (string, []string) {
 	return s[0], s[1:]
 }
 
-// Parse exchange config from CLI args
-// Format: private-key <file-path> public-key <file-path> [ OPTIONS ] PEERS
-func ConfigFromArgs(args []string) (_ []string, cfg File, err error) {
+// FromArgs parses exchange config from CLI args
+// Format: private-key <file-path> public-key <file-path> [ OPTIONS ] PEERS.
+func FromArgs(args []string) (_ []string, cfg File, err error) {
 	var arg string
 
 	for len(args) > 0 && args[0] != "peer" {
@@ -100,7 +100,7 @@ func ConfigFromArgs(args []string) (_ []string, cfg File, err error) {
 }
 
 // Parse peer config from CLI arguments
-// Format: peer public-key <file-path> [endpoint <ip>[:<port>]] [preshared-key <file-path>] [outfile <file-path>] [wireguard <dev> <peer> <extra_params>]
+// Format: peer public-key <file-path> [endpoint <ip>[:<port>]] [preshared-key <file-path>] [outfile <file-path>] [wireguard <dev> <peer> <extra_params>].
 func PeerConfigFromArgs(args []string) (_ []string, cfg PeerSection, err error) {
 	var arg string
 

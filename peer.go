@@ -21,7 +21,7 @@ type PeerConfig struct {
 	Endpoint *net.UDPAddr // The peers's endpoint
 }
 
-func (p *PeerConfig) PID() pid {
+func (p *PeerConfig) PID() PeerID { //nolint:revive
 	return pid(khPeerID.hash(p.PublicKey[:]))
 }
 
@@ -41,7 +41,7 @@ type peer struct {
 	logger *slog.Logger
 }
 
-func (s *Server) newPeer(cfg *PeerConfig) (*peer, error) {
+func (s *Server) newPeer(cfg PeerConfig) (*peer, error) {
 	if cfg.PublicKey == nil {
 		return nil, errors.New("missing public key")
 	}
@@ -60,7 +60,7 @@ func (s *Server) newPeer(cfg *PeerConfig) (*peer, error) {
 	return p, nil
 }
 
-func PeerIDFromPublicKey(spk spk) pid {
+func PeerIDFromPublicKey(spk spk) PeerID { //nolint:revive
 	return pid(khPeerID.hash(spk[:]))
 }
 

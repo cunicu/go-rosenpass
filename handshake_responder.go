@@ -12,7 +12,7 @@ type responderHandshake struct {
 	handshake
 }
 
-// Step 2
+// Step 2.
 func (hs *responderHandshake) handleInitHello(h *initHello) error {
 	// Keep some state for sendRespHello
 	hs.epki = h.epki
@@ -56,7 +56,7 @@ func (hs *responderHandshake) handleInitHello(h *initHello) error {
 	return nil
 }
 
-// Step 3
+// Step 3.
 func (hs *responderHandshake) sendRespHello() error {
 	var err error
 
@@ -104,7 +104,7 @@ func (hs *responderHandshake) sendRespHello() error {
 	})
 }
 
-// Step 6
+// Step 6.
 func (hs *responderHandshake) handleInitConf(i *initConf) error {
 	// Restore handshake state from message
 	hs.sidi = i.sidi
@@ -148,7 +148,7 @@ func (hs *responderHandshake) handleInitConf(i *initConf) error {
 	return nil
 }
 
-// Step 7
+// Step 7.
 func (hs *responderHandshake) sendEmptyData() error {
 	hs.txnm++
 
