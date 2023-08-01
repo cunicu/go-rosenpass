@@ -42,23 +42,24 @@ type PeerSection struct {
 	WireGuard *WireGuardSection `toml:"wireguard,inline" comment:"Settings for directly configuring a WireGuard peer with the negotiated PSK"`
 }
 
-func (f *PeerSection) ToConfig() (pc rosenpass.PeerConfig, err error) {
-	if pc.PublicKey, err = os.ReadFile(f.PublicKey); err != nil {
+func (ps *PeerSection) ToConfig() (pc rosenpass.PeerConfig, err error) {
+	if pc.PublicKey, err = os.ReadFile(ps.PublicKey); err != nil {
 		return pc, fmt.Errorf("failed to read public key: %w", err)
 	}
 
-	if f.PresharedKey != nil {
-		if k, err := os.ReadFile(*f.PresharedKey); err != nil {
+	if ps.PresharedKey != nil {
+		k, err := os.ReadFile(*ps.PresharedKey)
+		if err != nil {
 			return pc, fmt.Errorf("failed to read public key: %w", err)
-		} else {
-			if err := pc.PresharedKey.UnmarshalText(k); err != nil {
-				return pc, fmt.Errorf("failed to parse preshared key: %w", err)
-			}
+		}
+
+		if err := pc.PresharedKey.UnmarshalText(k); err != nil {
+			return pc, fmt.Errorf("failed to parse preshared key: %w", err)
 		}
 	}
 
-	if f.Endpoint != nil {
-		if pc.Endpoint, err = net.ResolveUDPAddr("udp", *f.Endpoint); err != nil {
+	if ps.Endpoint != nil {
+		if pc.Endpoint, err = net.ResolveUDPAddr("udp", *ps.Endpoint); err != nil {
 			return pc, fmt.Errorf("failed to resolve listen address: %w", err)
 		}
 	}
@@ -66,31 +67,31 @@ func (f *PeerSection) ToConfig() (pc rosenpass.PeerConfig, err error) {
 	return pc, err
 }
 
-func (c *PeerSection) FromConfig(pc rp.PeerConfig, dir string) (err error) {
+func (ps *PeerSection) FromConfig(pc rp.PeerConfig, dir string) (err error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("failed to create dir: %w", err)
 	}
 
 	if pc.Endpoint != nil {
 		ep := pc.Endpoint.String()
-		c.Endpoint = &ep
+		ps.Endpoint = &ep
 	}
 
 	keyOutFile := filepath.Join(dir, "out.key")
-	c.KeyOut = &keyOutFile
+	ps.KeyOut = &keyOutFile
 
-	c.PublicKey = filepath.Join(dir, "public.key")
-	if err := os.WriteFile(c.PublicKey, pc.PublicKey, 0o644); err != nil {
+	ps.PublicKey = filepath.Join(dir, "public.key")
+	if err := os.WriteFile(ps.PublicKey, pc.PublicKey, 0o600); err != nil {
 		return err
 	}
 
 	zeroKey := rp.PresharedKey{}
 	if pc.PresharedKey != zeroKey {
 		presharedKey := filepath.Join(dir, "preshared.key")
-		if err := os.WriteFile(presharedKey, []byte(base64.StdEncoding.EncodeToString(pc.PresharedKey[:])), 0o644); err != nil {
+		if err := os.WriteFile(presharedKey, []byte(base64.StdEncoding.EncodeToString(pc.PresharedKey[:])), 0o600); err != nil {
 			return err
 		}
-		c.PresharedKey = &presharedKey
+		ps.PresharedKey = &presharedKey
 	}
 
 	return nil

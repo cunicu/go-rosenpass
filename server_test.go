@@ -22,7 +22,7 @@ type handshakeHandler struct {
 	expired chan rp.PeerID
 }
 
-func (h *handshakeHandler) HandshakeCompleted(pid rp.PeerID, key rp.Key) {
+func (h *handshakeHandler) HandshakeCompleted(_ rp.PeerID, key rp.Key) {
 	h.keys <- key
 }
 
@@ -59,7 +59,7 @@ func TestServer(t *testing.T) {
 	})
 }
 
-func newGoServer(t *testing.T, name string, cfg rp.Config) (test.Server, error) {
+func newGoServer(_ *testing.T, name string, cfg rp.Config) (test.Server, error) {
 	cfg.Logger = slog.Default().With("node", name)
 
 	return rp.NewUDPServer(cfg)
@@ -105,8 +105,8 @@ func testHandshake(t *testing.T, newAlice, newBob func(*testing.T, string, rp.Co
 		expired: make(chan rp.PeerID, 16),
 	}
 
-	portAlice := int(1024 + rand.Int31n(math.MaxUint16-1024))
-	portBob := int(1024 + rand.Int31n(math.MaxUint16-1024))
+	portAlice := int(1024 + rand.Int31n(math.MaxUint16-1024)) //nolint:gosec
+	portBob := int(1024 + rand.Int31n(math.MaxUint16-1024))   //nolint:gosec
 
 	cfgAlice := rp.Config{
 		PublicKey: publicKeyAlice,

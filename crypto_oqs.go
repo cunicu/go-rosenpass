@@ -17,19 +17,21 @@ const (
 )
 
 func generateStaticKeyPair() ([]byte, []byte, error) {
-	if pk, sk, err := generateKeyPair(kemStatic); err != nil {
+	pk, sk, err := generateKeyPair(kemStatic)
+	if err != nil {
 		return nil, nil, err
-	} else {
-		return spk(pk), ssk(sk), nil
 	}
+
+	return spk(pk), ssk(sk), nil
 }
 
 func generateEphemeralKeyPair() (epk, esk, error) {
-	if pk, sk, err := generateKeyPair(kemEphemeral); err != nil {
+	pk, sk, err := generateKeyPair(kemEphemeral)
+	if err != nil {
 		return nil, nil, err
-	} else {
-		return epk(pk), esk(sk), nil
 	}
+
+	return epk(pk), esk(sk), nil
 }
 
 func generateKeyPair(alg kemType) ([]byte, []byte, error) {

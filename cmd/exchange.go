@@ -11,8 +11,8 @@ import (
 	"github.com/stv0g/go-rosenpass/config"
 )
 
-func exchange(cmd *cobra.Command, args []string) error {
-	_, cfgFile, err := config.ConfigFromArgs(args)
+func exchange(_ *cobra.Command, args []string) error {
+	_, cfgFile, err := config.FromArgs(args)
 	if err != nil {
 		return fmt.Errorf("failed to parse arguments: %s", err)
 	}
@@ -24,7 +24,7 @@ func exchange(cmd *cobra.Command, args []string) error {
 	return doExchange(cfgFile)
 }
 
-func exchangeConfig(cmd *cobra.Command, args []string) error {
+func exchangeConfig(_ *cobra.Command, args []string) error {
 	cfgFilename := args[0]
 	var cfgFile config.File
 

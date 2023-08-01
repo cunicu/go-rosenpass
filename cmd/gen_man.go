@@ -10,14 +10,10 @@ import (
 	"github.com/spf13/cobra/doc"
 )
 
-func genMan(cmd *cobra.Command, args []string) error {
+func genMan(_ *cobra.Command, _ []string) error {
 	if err := os.MkdirAll(genManOpts.Path, 0o755); err != nil {
 		return err
 	}
 
-	if err := doc.GenManTreeFromOpts(rootCmd, genManOpts); err != nil {
-		return err
-	}
-
-	return nil
+	return doc.GenManTreeFromOpts(rootCmd, genManOpts)
 }

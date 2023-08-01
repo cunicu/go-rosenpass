@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	// TODO: Only expose errors which are need on the public API
+	// TODO: Only expose errors which are need on the public API.
 	ErrUnexpectedMsgType = errors.New("received unexpected message type")
 	ErrPeerNotFound      = errors.New("peer not found")
 	ErrSessionNotFound   = errors.New("session not found")

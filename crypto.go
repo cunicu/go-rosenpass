@@ -17,18 +17,19 @@ type keyEncapsulation interface {
 	DecapSecret(ct []byte) (ss []byte, err error)
 }
 
-// Generate a new Classic McEliece key pair
-func GenerateKeyPair() (spk, ssk, error) {
+// Generate a new Classic McEliece key pair.
+func GenerateKeyPair() (PublicKey, SecretKey, error) { //nolint:revive
 	return generateStaticKeyPair()
 }
 
-// Generates a new pre-shared key
-func GeneratePresharedKey() (key, error) {
-	if k, err := generateKey(pskSize); err != nil {
+// Generates a new pre-shared key.
+func GeneratePresharedKey() (Key, error) { //nolint:revive
+	k, err := generateKey(pskSize)
+	if err != nil {
 		return key{}, err
-	} else {
-		return key(k), nil
 	}
+
+	return key(k), nil
 }
 
 func blake2(k key, d []byte) key {
@@ -73,27 +74,30 @@ func newXAEAD(k key) (cipher.AEAD, error) {
 }
 
 func generateSessionID() (sid, error) {
-	if s, err := generateKey(sidSize); err != nil {
+	s, err := generateKey(sidSize)
+	if err != nil {
 		return sid{}, err
-	} else {
-		return sid(s), nil
 	}
+
+	return sid(s), nil
 }
 
 func generateNonce() (nonceX, error) {
-	if n, err := generateKey(nonceSizeX); err != nil {
+	n, err := generateKey(nonceSizeX)
+	if err != nil {
 		return nonceX{}, err
-	} else {
-		return nonceX(n), nil
 	}
+
+	return nonceX(n), nil
 }
 
 func generateBiscuitKey() (key, error) {
-	if n, err := generateKey(keySize); err != nil {
+	n, err := generateKey(keySize)
+	if err != nil {
 		return key{}, err
-	} else {
-		return key(n), nil
 	}
+
+	return key(n), nil
 }
 
 func generateKey(l int) ([]byte, error) {

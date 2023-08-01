@@ -31,9 +31,9 @@ type File struct {
 	Peers []PeerSection `toml:"peers,omitempty" comment:"A table of peers"`
 }
 
-func (c *File) Load(r io.Reader) error {
+func (f *File) Load(r io.Reader) error {
 	enc := toml.NewDecoder(r)
-	return enc.Decode(c)
+	return enc.Decode(f)
 }
 
 func (f *File) Dump(w io.Writer) error {
@@ -103,27 +103,28 @@ func (f *File) ToConfig() (c rp.Config, err error) {
 	c.Handlers = append(c.Handlers, kh, ch, wh)
 
 	for _, p := range f.Peers {
-		if pc, err := p.ToConfig(); err != nil {
+		pc, err := p.ToConfig()
+		if err != nil {
 			return c, err
-		} else {
-			c.Peers = append(c.Peers, pc)
+		}
 
-			pid := pc.PID()
+		c.Peers = append(c.Peers, pc)
 
-			// Register peer to handlers
-			if p.KeyOut != nil {
-				if err := kh.addPeerKeyoutFile(pid, *p.KeyOut); err != nil {
-					return c, fmt.Errorf("failed to add keyout file: %w", err)
-				}
+		pid := pc.PID()
+
+		// Register peer to handlers
+		if p.KeyOut != nil {
+			if err := kh.addPeerKeyoutFile(pid, *p.KeyOut); err != nil {
+				return c, fmt.Errorf("failed to add keyout file: %w", err)
 			}
+		}
 
-			if p.ExchangeCommand != nil {
-				ch.addPeerCommand(pid, p.ExchangeCommand)
-			}
+		if p.ExchangeCommand != nil {
+			ch.addPeerCommand(pid, p.ExchangeCommand)
+		}
 
-			if p.WireGuard != nil {
-				wh.addPeer(pid, *p.WireGuard)
-			}
+		if p.WireGuard != nil {
+			wh.addPeer(pid, *p.WireGuard)
 		}
 	}
 
@@ -140,7 +141,7 @@ func (f *File) FromConfig(c rp.Config, dir string) (err error) {
 	}
 
 	f.PublicKey = filepath.Join(dir, "public.key")
-	if err := os.WriteFile(f.PublicKey, c.PublicKey, 0o644); err != nil {
+	if err := os.WriteFile(f.PublicKey, c.PublicKey, 0o600); err != nil {
 		return err
 	}
 
@@ -150,7 +151,7 @@ func (f *File) FromConfig(c rp.Config, dir string) (err error) {
 	}
 
 	for i, pc := range c.Peers {
-		pDir := filepath.Join(dir, fmt.Sprintf("peer%d", i))
+		pDir := filepath.Join(dir, fmt.Sprintf("peer%d", i)) // nolint:forbidigo
 		if err := os.MkdirAll(pDir, 0o755); err != nil {
 			return err
 		}
@@ -158,9 +159,9 @@ func (f *File) FromConfig(c rp.Config, dir string) (err error) {
 		var ps PeerSection
 		if err := ps.FromConfig(pc, pDir); err != nil {
 			return err
-		} else {
-			f.Peers = append(f.Peers, ps)
 		}
+
+		f.Peers = append(f.Peers, ps)
 	}
 
 	return nil

@@ -4,10 +4,10 @@
 package rosenpass
 
 import (
+	"crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"math"
-	"math/rand"
 	"time"
 
 	"golang.org/x/exp/slog"
@@ -27,7 +27,7 @@ type initiatorHandshake struct {
 	biscuit sealedBiscuit
 }
 
-// Step 1
+// Step 1.
 func (hs *initiatorHandshake) sendInitHello() (*initHello, error) {
 	var err error
 
@@ -84,7 +84,7 @@ func (hs *initiatorHandshake) sendInitHello() (*initHello, error) {
 	}, nil
 }
 
-// Step 4
+// Step 4.
 func (hs *initiatorHandshake) handleRespHello(r *respHello) error {
 	hs.biscuit = r.biscuit
 	hs.sidr = r.sidr
@@ -119,7 +119,7 @@ func (hs *initiatorHandshake) handleRespHello(r *respHello) error {
 	return nil
 }
 
-// Step 5
+// Step 5.
 func (hs *initiatorHandshake) sendInitConf() error {
 	// ICI3: Mix both session IDs as part of the protocol transcript.
 	hs.mix(hs.sidi[:], hs.sidr[:])
@@ -142,7 +142,7 @@ func (hs *initiatorHandshake) sendInitConf() error {
 	})
 }
 
-// Step 8
+// Step 8.
 func (hs *initiatorHandshake) handleEmptyData(e *emptyData) error {
 	n := append(e.ctr[:], 0, 0, 0, 0)
 	txnt := binary.LittleEndian.Uint64(e.ctr[:])
@@ -167,17 +167,25 @@ func (hs *initiatorHandshake) handleEmptyData(e *emptyData) error {
 
 // Retransmission
 
-func (hs *initiatorHandshake) scheduleRetransmission(pl payload) {
-	random := 2*rand.Float64() - 1
-
+func (hs *initiatorHandshake) retransmitDelay() time.Duration {
 	after := RetransmitDelayBegin.Seconds() * math.Pow(RetransmitDelayGrowth, float64(hs.txRetryCount))
 	if after > RetransmitDelayEnd.Seconds() {
 		after = RetransmitDelayEnd.Seconds()
 	}
 
-	after += random * RetransmitDelayJitter.Seconds()
+	buf := make([]byte, 4)
+	if n, err := rand.Read(buf); err == nil && n == 4 {
+		irand := binary.LittleEndian.Uint32(buf)
+		frand := float64(irand) / math.MaxUint32
 
-	hs.txTimer = time.AfterFunc(time.Duration(after*1e6)*time.Microsecond, func() {
+		after += (2*frand - 1) * RetransmitDelayJitter.Seconds()
+	}
+
+	return time.Duration(after*1e6) * time.Microsecond
+}
+
+func (hs *initiatorHandshake) scheduleRetransmission(pl payload) {
+	hs.txTimer = time.AfterFunc(hs.retransmitDelay(), func() {
 		hs.txRetryCount++
 
 		switch pl.(type) {

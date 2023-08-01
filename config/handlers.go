@@ -86,7 +86,7 @@ func (h *exchangeCommandHandler) HandshakeCompleted(pid rp.PeerID, key rp.Key) {
 		return
 	}
 
-	c := exec.Command(cmd[0], cmd[1:]...)
+	c := exec.Command(cmd[0], cmd[1:]...) // nolint:gosec
 	c.Stdin = strings.NewReader(key.String() + "\n")
 
 	go func() {
@@ -126,7 +126,7 @@ func (h *wireGuardHandler) HandshakeExpired(pid rp.PeerID) {
 	h.outputKey(rp.KeyOutputReasonStale, pid, key)
 }
 
-func (h *wireGuardHandler) outputKey(reason rp.KeyOutputReason, pid rp.PeerID, psk rp.Key) {
+func (h *wireGuardHandler) outputKey(_ rp.KeyOutputReason, pid rp.PeerID, psk rp.Key) {
 	wg, ok := h.peers[pid]
 	if !ok {
 		return

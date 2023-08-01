@@ -22,7 +22,7 @@ var (
 	lblWireGuardPSK                 = []byte("wireguard psk")
 )
 
-// Precompute keyed hash functions (kh*)
+// Precompute keyed hash functions (kh*).
 var (
 	khProto                 = key{}.hash(lblProtocol)
 	khCKE                   = khProto.hash(lblChainingKeyExtract)
@@ -43,17 +43,17 @@ var (
 	//
 	// Using this instead of Timing::MIN or Timing::INFINITY to avoid floating
 	// point math weirdness.
-	// BeforeCommonEra = 24 * 356 * 10000 * time.Hour
+	// BeforeCommonEra = 24 * 356 * 10000 * time.Hour.
 
 	// From the WireGuard paper
-	// Rekey every two minutes, discard the key if no rekey is achieved within three
+	// Rekey every two minutes, discard the key if no rekey is achieved within three.
 	RekeyAfterTimeResponder = 2 * time.Minute
 	RekeyAfterTimeInitiator = RekeyAfterTimeResponder + 10*time.Second
 	RejectAfterTime         = 3 * time.Minute
 
 	// Seconds until the biscuit key is changed; we issue biscuits
 	// using one biscuit key for one epoch and store the biscuit for
-	// decryption for a second epoch
+	// decryption for a second epoch.
 	BiscuitEpoch = 5 * time.Minute
 
 	// Retransmission constants

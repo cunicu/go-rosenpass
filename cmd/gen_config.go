@@ -12,7 +12,7 @@ import (
 	"github.com/stv0g/go-rosenpass/config"
 )
 
-func genConfig(cmd *cobra.Command, args []string) error {
+func genConfig(_ *cobra.Command, args []string) error {
 	cfgFilename := args[0]
 
 	if _, err := os.Stat(cfgFilename); err == nil && !force {

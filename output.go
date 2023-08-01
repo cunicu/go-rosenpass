@@ -18,7 +18,7 @@ const (
 )
 
 // Output format:
-// output-key peer {} key-file {of:?} {why}
+// output-key peer {} key-file {of:?} {why}.
 type KeyOutput struct {
 	Peer    PeerID
 	KeyFile string

@@ -13,9 +13,9 @@ import (
 func TestArguments(t *testing.T) {
 	require := require.New(t)
 
-	args, cfg, err := config.ConfigFromArgs([]string{
+	args, cfg, err := config.FromArgs([]string{
 		"public-key", "pk",
-		"private-key", "sk",
+		"secret-key", "sk",
 		"listen", "lst",
 		"verbose",
 		"peer", "public-key", "a_pk", "preshared-key", "a_psk", "endpoint", "a_ep", "outfile", "a_of", "wireguard", "a_wg", "jm0556G9mvQB8ZG7FdNR4SaLRc83VVoyTG2D9NWecS4=",

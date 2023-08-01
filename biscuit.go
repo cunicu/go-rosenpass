@@ -16,34 +16,34 @@ func (n *biscuitNo) Inc() {
 	}
 }
 
-// String returns a string representation of the biscuit counter in hex-notation
+// String returns a string representation of the biscuit counter in hex-notation.
 func (n *biscuitNo) String() string {
 	return hex.EncodeToString(n[:])
 }
 
-// Equal compares the biscuit counters in constant time and returns true if they are equal
+// Equal compares the biscuit counters in constant time and returns true if they are equal.
 func (n *biscuitNo) Equal(m biscuitNo) bool {
 	return n.Compare(m) == 0
 }
 
-// Larger compares the biscuit counters in constant time and returns true if it is larger than the supplied one
+// Larger compares the biscuit counters in constant time and returns true if it is larger than the supplied one.
 func (n *biscuitNo) Larger(m biscuitNo) bool {
 	return n.Compare(m) == 1
 }
 
-// Lesser compares the biscuit counters in constant time and returns true if it lesser than the supplied one
+// Lesser compares the biscuit counters in constant time and returns true if it lesser than the supplied one.
 func (n *biscuitNo) Lesser(m biscuitNo) bool {
 	return n.Compare(m) == -1
 }
 
-// LargerOrEqual compares the biscuit counters in constant time and returns true if it larger or equal than the supplied one
+// LargerOrEqual compares the biscuit counters in constant time and returns true if it larger or equal than the supplied one.
 func (n *biscuitNo) LargerOrEqual(m biscuitNo) bool {
 	return n.Compare(m) >= 0
 }
 
-// Compare compares the biscuit counters in constant time
+// Compare compares the biscuit counters in constant time.
 func (n *biscuitNo) Compare(m biscuitNo) int {
-	var gt byte = 0
+	var gt byte
 	var eq byte = 1
 
 	i := biscuitNoSize

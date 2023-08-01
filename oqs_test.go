@@ -13,7 +13,7 @@ import (
 )
 
 // TestLibOQS verifies that liboqs supports the required
-// KEM algorithms for rosenpass
+// KEM algorithms for rosenpass.
 func TestLibOQS(t *testing.T) {
 	require := require.New(t)
 

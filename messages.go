@@ -37,7 +37,7 @@ func (e *envelope) MarshalBinaryAndSeal(spkt spk) []byte {
 	return buf
 }
 
-func (e *envelope) CheckAndUnmarshalBinary(buf []byte, spkm spk) (int, error) {
+func (e *envelope) CheckAndUnmarshalBinary(buf []byte, _ spk) (int, error) {
 	if len(buf) < envelopeSize {
 		return -1, ErrMsgTruncated
 	}
@@ -90,12 +90,12 @@ func (e *envelope) UnmarshalBinary(buf []byte) (int, error) {
 
 	o := 4
 
-	if p, err := e.payload.UnmarshalBinary(buf[o : o+lenPayload]); err != nil {
+	p, err := e.payload.UnmarshalBinary(buf[o : o+lenPayload])
+	if err != nil {
 		return -1, err
-	} else {
-		o += p
 	}
 
+	o += p
 	o += copy(e.mac[:], buf[o:])
 	o += copy(e.cookie[:], buf[o:])
 
@@ -261,7 +261,8 @@ func concat(length int, parts ...[]byte) []byte {
 	}
 
 	if len(buf) != length {
-		panic("failed to construct msg")
+		// TODO: Improve error handling here
+		panic("failed to construct msg") //nolint:forbidigo
 	}
 
 	return buf
