@@ -22,6 +22,13 @@ jobs:
         cmake
         ninja-build
 
+    - name: Install rosenpass from git
+      uses: baptiste0928/cargo-install@v2
+      with:
+        crate: rosenpass
+        git: https://github.com/rosenpass/rosenpass
+        commit: b29720b0c67ddf96f114c134bed076f27018313e
+
     - name: Checkout liboqs
       uses: actions/checkout@v3
       with:
@@ -44,32 +51,6 @@ jobs:
       with:
         go-version-file: go.mod
         check-latest: true
-
-    - name: Set up Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        profile: minimal
-        override: true
-
-    - name: Set up cargo cache
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          ~/.cargo/crates.toml
-          ~/.cargo/.crates2.json
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Install Rosenpass tool
-      uses: actions-rs/cargo@v1
-      with:
-        command: install
-        args: --force --git https://github.com/rosenpass/rosenpass --rev b29720b0c67ddf96f114c134bed076f27018313e
 
     - name: Set up gotestfmt
       run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
