@@ -17,9 +17,33 @@ type keyEncapsulation interface {
 	DecapSecret(ct []byte) (ss []byte, err error)
 }
 
-// Generate a new Classic McEliece key pair.
+// GenerateKeyPair generates a new Classic McEliece key pair.
 func GenerateKeyPair() (PublicKey, SecretKey, error) { //nolint:revive
 	return generateStaticKeyPair()
+}
+
+// GenerateKeyPair generates a new Classic McEliece key pair in its old (round 2) format.
+func GenerateRound2KeyPair() (PublicKey, SecretKey, error) { //nolint:revive
+	spk, ssk, err := generateStaticKeyPair()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Convert a secret key from its round 3 to round 2 format
+	if len(ssk) == sskSize {
+		g := ssk[40:232]
+		a := ssk[232:13032]
+		s := ssk[13032:13608]
+
+		sskNew := []byte{}
+		sskNew = append(sskNew, s...)
+		sskNew = append(sskNew, g...)
+		sskNew = append(sskNew, a...)
+
+		return spk, sskNew, nil
+	}
+
+	return spk, ssk, nil
 }
 
 // Generates a new pre-shared key.

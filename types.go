@@ -69,9 +69,10 @@ const (
 	ckSize  = hashSize // Chaining key size
 
 	// Classic McEliece 460896 sizes.
-	sctSize = 188    // Static Cipher-text size
-	spkSize = 524160 // Static public key size
-	sskSize = 13568  // Static secret key size
+	sctSize       = 188    // Static Cipher-text size
+	spkSize       = 524160 // Static public key size
+	sskSizeRound2 = 13568  // Static secret key size (Round 2 implementation)
+	sskSize       = 13608  // Static secret key size
 
 	// Kyber-512 sizes.
 	ectSize = 768  // Ephemeral cipher text size
