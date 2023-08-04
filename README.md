@@ -25,7 +25,7 @@ You can download a pre-built binary from there.
 
 ### Building from source
 
-_go-rosenpass_ requires [liboqs](https://github.com/open-quantum-safe/liboqs) for Post-Quantum crypto primitives.
+_go-rosenpass_ requires [liboqs](https://github.com/open-quantum-safe/liboqs) (**v0.8.0**) for Post-Quantum crypto primitives.
 Please have a look the [liboqs-go](https://github.com/open-quantum-safe/liboqs-go) bindings for details build instructions.
 
 #### Linking statically against liboqs & libcrypto
