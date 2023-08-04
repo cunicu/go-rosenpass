@@ -33,21 +33,21 @@ func (h *handshakeHandler) HandshakeExpired(pid rp.PeerID) {
 func TestServer(t *testing.T) {
 	run := func(t *testing.T, newGoServer, newRustServer func(*testing.T, string, rp.Config) (test.Server, error), numHandshakes int) {
 		t.Run("Go-to-Go", func(t *testing.T) {
-			testHandshake(t, newGoServer, newGoServer, numHandshakes)
+			testHandshake(t, newGoServer, newGoServer, rp.GenerateKeyPair, rp.GenerateKeyPair, numHandshakes)
 		})
 
 		t.Run("Rust-to-Go", func(t *testing.T) {
-			testHandshake(t, newRustServer, newGoServer, numHandshakes)
+			testHandshake(t, newRustServer, newGoServer, rp.GenerateRound2KeyPair, rp.GenerateKeyPair, numHandshakes)
 		})
 
 		t.Run("Go-to-Rust", func(t *testing.T) {
-			testHandshake(t, newGoServer, newRustServer, numHandshakes)
+			testHandshake(t, newGoServer, newRustServer, rp.GenerateRound2KeyPair, rp.GenerateKeyPair, numHandshakes)
 		})
 	}
 
 	t.Run("Rust-to-Rust", func(t *testing.T) {
 		// We only perform a single handshake as the tests should not wait for the hardcoded rekey timeout
-		testHandshake(t, newStandaloneRustServer, newStandaloneRustServer, 1)
+		testHandshake(t, newStandaloneRustServer, newStandaloneRustServer, rp.GenerateRound2KeyPair, rp.GenerateRound2KeyPair, 1)
 	})
 
 	t.Run("In-process", func(t *testing.T) {
@@ -81,17 +81,17 @@ func newStandaloneRustServer(t *testing.T, name string, cfg rp.Config) (test.Ser
 	return test.NewStandaloneServer(cfg, "rosenpass", dir)
 }
 
-func testHandshake(t *testing.T, newAlice, newBob func(*testing.T, string, rp.Config) (test.Server, error), numHandshakes int) {
+func testHandshake(t *testing.T, newServerAlice, newServerBob func(*testing.T, string, rp.Config) (test.Server, error), newKeyPairAlice, newKeyPairBob func() (rp.PublicKey, rp.SecretKey, error), numHandshakes int) {
 	require := require.New(t)
 
 	// Generate keys
 	psk, err := rp.GeneratePresharedKey()
 	require.NoError(err)
 
-	publicKeyAlice, secretKeyAlice, err := rp.GenerateKeyPair()
+	publicKeyAlice, secretKeyAlice, err := newKeyPairAlice()
 	require.NoError(err)
 
-	publicKeyBob, secretKeyBob, err := rp.GenerateKeyPair()
+	publicKeyBob, secretKeyBob, err := newKeyPairBob()
 	require.NoError(err)
 
 	// Generate configurations
@@ -156,10 +156,10 @@ func testHandshake(t *testing.T, newAlice, newBob func(*testing.T, string, rp.Co
 	cfgBob.Peers[0].PublicKey = cfgAlice.PublicKey
 
 	// Create servers
-	svrAlice, err := newAlice(t, "alice", cfgAlice)
+	svrAlice, err := newServerAlice(t, "alice", cfgAlice)
 	require.NoError(err)
 
-	svrBob, err := newBob(t, "bob", cfgBob)
+	svrBob, err := newServerBob(t, "bob", cfgBob)
 	require.NoError(err)
 
 	err = svrAlice.Run()
