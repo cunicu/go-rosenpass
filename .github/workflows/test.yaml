@@ -35,7 +35,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         repository: open-quantum-safe/liboqs
-        ref: main
+        ref: 0.8.0
         path: liboqs
   
     - name: Install liboqs
