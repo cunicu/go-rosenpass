@@ -41,7 +41,7 @@ func TestServer(t *testing.T) {
 		})
 
 		t.Run("Go-to-Rust", func(t *testing.T) {
-			testHandshake(t, newGoServer, newRustServer, rp.GenerateRound2KeyPair, rp.GenerateKeyPair, numHandshakes)
+			testHandshake(t, newGoServer, newRustServer, rp.GenerateKeyPair, rp.GenerateRound2KeyPair, numHandshakes)
 		})
 	}
 
