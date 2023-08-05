@@ -1,17 +1,10 @@
 # SPDX-FileCopyrightText: 2023 Steffen Vogel <post@steffenvogel.de>
 # SPDX-License-Identifier: Apache-2.0
 
-name: Release
+name: Test Release
 
 on:
-  push:
-    tags:
-    - 'v*'
-
-permissions:
-  contents: write
-  packages: write
-  # issues: write
+  pull_request:
 
 jobs:
   goreleaser:
@@ -34,6 +27,4 @@ jobs:
     - uses: goreleaser/goreleaser-action@v4
       with:
         version: latest
-        args: release --clean
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        args: release --clean --snapshot

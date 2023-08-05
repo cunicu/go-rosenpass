@@ -9,37 +9,17 @@ on:
     - master
   pull_request:
 
-
 jobs:
-  build:
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
+
+    env:
+      CGO_ENABLED: "0"
+
     steps:
-    - uses: actions/checkout@v3
-
-    - name: Install system dependencies
-      run: sudo apt-get install -y
-        libsodium-dev
-        libclang-dev
-        pkg-config
-        cmake
-        ninja-build
-
-    - name: Checkout liboqs
+    - name: Checkout
       uses: actions/checkout@v3
-      with:
-        repository: open-quantum-safe/liboqs
-        ref: main
-        path: liboqs
-  
-    - name: Install liboqs
-      run: |
-        mkdir -p liboqs/build && cd liboqs/build
-        cmake -GNinja \
-          -DOQS_BUILD_ONLY_LIB=ON \
-          -DOQS_MINIMAL_BUILD="KEM_kyber_512;KEM_classic_mceliece_460896" \
-          -DBUILD_SHARED_LIBS=ON \
-          -DCMAKE_INSTALL_PREFIX=/usr ..
-        sudo ninja install
 
     - name: Set up Go
       uses: actions/setup-go@v4
