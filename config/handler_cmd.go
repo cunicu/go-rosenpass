@@ -4,6 +4,7 @@
 package config
 
 import (
+	"bytes"
 	"os/exec"
 	"strings"
 
@@ -31,12 +32,19 @@ func (h *exchangeCommandHandler) HandshakeCompleted(pid rp.PeerID, key rp.Key) {
 		return
 	}
 
+	out := &bytes.Buffer{}
+
 	c := exec.Command(cmd[0], cmd[1:]...) // nolint:gosec
 	c.Stdin = strings.NewReader(key.String() + "\n")
+	c.Stdout = out
+	c.Stderr = out
 
 	go func() {
 		if err := c.Run(); err != nil {
-			slog.Error("Failed to run exchange command", "error", err)
+			outStr := strings.TrimSpace(out.String())
+			slog.Error("Failed to run command",
+				slog.Any("error", err),
+				slog.String("output", outStr))
 		}
 	}()
 }
