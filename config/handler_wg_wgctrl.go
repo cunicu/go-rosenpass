@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2023 Steffen Vogel <post@steffenvogel.de>
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build !wgcmd && cgo && (freebsd || openbsd)
+//go:build cgo || !(freebsd || openbsd)
 
 package config
 
@@ -29,6 +29,19 @@ func newWireGuardHandler() (hdlr *wireGuardHandler, err error) {
 	}
 
 	return hdlr, nil
+}
+
+func (h *wireGuardHandler) addPeer(pid rp.PeerID, wg WireGuardSection) {
+	h.peers[pid] = wg
+}
+
+func (h *wireGuardHandler) HandshakeCompleted(pid rp.PeerID, key rp.Key) {
+	h.outputKey(rp.KeyOutputReasonStale, pid, key)
+}
+
+func (h *wireGuardHandler) HandshakeExpired(pid rp.PeerID) {
+	key, _ := rp.GeneratePresharedKey()
+	h.outputKey(rp.KeyOutputReasonStale, pid, key)
 }
 
 func (h *wireGuardHandler) outputKey(_ rp.KeyOutputReason, pid rp.PeerID, psk rp.Key) {
