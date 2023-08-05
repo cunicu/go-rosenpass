@@ -27,10 +27,18 @@ func genConfig(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to generate key: %w", err)
 	}
 
+	pskFile := "rp-peer-preshared-key"
+
 	cfgFile := config.File{
 		PublicKey: "rp-public-key",
 		SecretKey: "rp-secret-key",
 		Verbosity: "Verbose",
+		ListenAddrs: []string{
+			"192.0.2.22:15122",
+			"[2001:0db8:85a3::8a2e:0370:7334]:25223",
+			"0.0.0.0:1234",
+			"[::]:1234",
+		},
 		Peers: []config.PeerSection{
 			{
 				PublicKey: "rp-peer-public-key",
@@ -45,6 +53,7 @@ func genConfig(_ *cobra.Command, args []string) error {
 					"preshared-key",
 					"/dev/stdin",
 				},
+				PresharedKey: &pskFile,
 				WireGuard: &config.WireGuardSection{
 					Interface: "wg0",
 					PublicKey: pk,
