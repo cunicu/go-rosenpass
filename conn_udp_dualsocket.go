@@ -6,7 +6,6 @@
 package rosenpass
 
 import (
-	"fmt"
 	"net"
 )
 
