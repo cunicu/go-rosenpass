@@ -22,7 +22,8 @@ jobs:
       CGO_ENABLED: ${{ matrix.cgo && '1' || '0' }}
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout
+      uses: actions/checkout@v3
 
     - name: Install system dependencies
       run: sudo apt-get install -y
@@ -37,7 +38,7 @@ jobs:
       with:
         crate: rosenpass
         git: https://github.com/rosenpass/rosenpass
-        commit: b29720b0c67ddf96f114c134bed076f27018313e
+        commit: a2b177470c689c39ee9be01dced124f8d0053f9f
 
     - name: Checkout liboqs
       uses: actions/checkout@v3
