@@ -18,12 +18,12 @@ func validate(_ *cobra.Command, args []string) error {
 
 		if err := cfgFile.LoadFile(cfgFilename); err != nil {
 			errors++
-			logger.Error("Failed to load config file", slog.String("file", cfgFilename), slog.Any("error", err))
+			slog.Error("Failed to load config file", slog.String("file", cfgFilename), slog.Any("error", err))
 		}
 
 		if _, err := cfgFile.ToConfig(); err != nil {
 			errors++
-			logger.Error("Failed to parse config file", slog.String("file", cfgFilename), slog.Any("error", err))
+			slog.Error("Failed to parse config file", slog.String("file", cfgFilename), slog.Any("error", err))
 		}
 	}
 
