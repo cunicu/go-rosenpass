@@ -14,7 +14,6 @@ import (
 )
 
 var (
-	logger                     *slog.Logger
 	skPath, pkPath, configFile string
 	verbose, force             bool
 
@@ -93,7 +92,7 @@ var (
 )
 
 func main() {
-	logger = slog.New(slog.NewTextHandler(os.Stderr, nil))
+	setupLogging(false)
 
 	f := genKeyCmd.PersistentFlags()
 	f.StringVarP(&pkPath, "public-key", "p", "", "where to write public-key to")
@@ -121,8 +120,8 @@ func main() {
 	rootCmd.AddCommand(manCmd)
 
 	if err := rootCmd.Execute(); err != nil {
-		logger.Error("Error", slog.Any("error", err))
-		os.Exit(-1) //nolint:forbidigo // This is the only occurence in the code
+		slog.Error("Error", slog.Any("error", err))
+		os.Exit(-1) //nolint:forbidigo // This is the only occurrence in the code
 	}
 }
 
@@ -133,7 +132,8 @@ func setupLogging(verbose bool) {
 		opts.Level = slog.LevelDebug
 	}
 
-	handler := slog.NewTextHandler(os.Stdout, opts)
-	logger = slog.New(handler)
+	handler := slog.NewTextHandler(os.Stderr, opts)
+	logger := slog.New(handler)
+
 	slog.SetDefault(logger)
 }
