@@ -4,6 +4,7 @@
 package rosenpass
 
 import (
+	"crypto/subtle"
 	"errors"
 )
 
@@ -37,19 +38,19 @@ func (e *envelope) MarshalBinaryAndSeal(spkt spk) []byte {
 	return buf
 }
 
-func (e *envelope) CheckAndUnmarshalBinary(buf []byte, _ spk) (int, error) {
+func (e *envelope) CheckAndUnmarshalBinary(buf []byte, spkm spk) (int, error) {
 	if len(buf) < envelopeSize {
 		return -1, ErrMsgTruncated
 	}
 
-	// macOffset := len(buf) - macSize - cookieSize
-	// macWire := mac(buf[macOffset : macOffset+macSize])
-	// macKey := khMAC.hash(spkm, buf[:macOffset])
-	// macCalc := mac(macKey[:macSize])
+	macOffset := len(buf) - macSize - cookieSize
+	macWire := buf[macOffset : macOffset+macSize]
+	macKey := khMAC.hash(spkm, buf[:macOffset])
+	macCalc := macKey[:macSize]
 
-	// if macWire != macCalc {
-	// 	return -1, ErrInvalidMAC
-	// }
+	if subtle.ConstantTimeCompare(macWire, macCalc) != 1 {
+		return -1, ErrInvalidMAC
+	}
 
 	return e.UnmarshalBinary(buf)
 }

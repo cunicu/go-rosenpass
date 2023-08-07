@@ -30,8 +30,8 @@ type peer struct {
 
 	rekeyTimer *time.Timer
 
-	initialEndpoint *net.UDPAddr // The peers's endpoint as configured
-	endpoint        *net.UDPAddr // The peers's endpoint as learned from its last packet
+	initialEndpoint endpoint // The peers's endpoint as configured
+	endpoint        endpoint // The peers's endpoint as learned from its last packet
 
 	spkt spk // The peer’s public key
 	psk  key // The peer's pre-shared key
@@ -49,10 +49,13 @@ func (s *Server) newPeer(cfg PeerConfig) (*peer, error) {
 	p := &peer{
 		server: s,
 
-		initialEndpoint: cfg.Endpoint,
-		endpoint:        cfg.Endpoint,
+		initialEndpoint: &udpEndpoint{cfg.Endpoint},
 		spkt:            cfg.PublicKey,
 		psk:             cfg.PresharedKey,
+	}
+
+	if cfg.Endpoint != nil {
+		p.endpoint = &udpEndpoint{cfg.Endpoint}
 	}
 
 	p.logger = s.logger.With(slog.Any("pid", p.PID()))
@@ -80,12 +83,7 @@ func (p *peer) initiateHandshake() (*initiatorHandshake, error) {
 		},
 	}
 
-	m, err := hs.sendInitHello()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := hs.send(m); err != nil {
+	if err := hs.sendInitHello(); err != nil {
 		return nil, fmt.Errorf("failed to send: %w", err)
 	}
 
