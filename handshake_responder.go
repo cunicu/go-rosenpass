@@ -57,7 +57,7 @@ func (hs *responderHandshake) handleInitHello(h *initHello) error {
 }
 
 // Step 3.
-func (hs *responderHandshake) sendRespHello() error {
+func (hs *responderHandshake) sendRespHello(from endpoint) error {
 	var err error
 
 	// RHR1: Responder generates a session ID.
@@ -101,7 +101,7 @@ func (hs *responderHandshake) sendRespHello() error {
 		scti:    sct(scti),
 		biscuit: biscuit,
 		auth:    authTag(auth),
-	})
+	}, from)
 }
 
 // Step 6.
@@ -149,7 +149,7 @@ func (hs *responderHandshake) handleInitConf(i *initConf) error {
 }
 
 // Step 7.
-func (hs *responderHandshake) sendEmptyData() error {
+func (hs *responderHandshake) sendEmptyData(from endpoint) error {
 	hs.txnm++
 
 	n := make([]byte, nonceSize)
@@ -166,7 +166,7 @@ func (hs *responderHandshake) sendEmptyData() error {
 		sid:  hs.sidi,
 		ctr:  txNonce(n),
 		auth: authTag(auth),
-	})
+	}, from)
 }
 
 // Helpers

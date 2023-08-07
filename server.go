@@ -177,7 +177,7 @@ func (s *Server) rotateBiscuitKey() error {
 	return nil
 }
 
-func (s *Server) handle(pl payload, from *net.UDPAddr) error {
+func (s *Server) handle(pl payload, from endpoint) error {
 	var err error
 
 	mTyp := msgTypeFromPayload(pl)
@@ -197,14 +197,7 @@ func (s *Server) handle(pl payload, from *net.UDPAddr) error {
 			return err
 		}
 
-		// Update peers endpoint of the init hello message
-		// has been received from an unknown address.
-		if hs.peer.endpoint == nil || !compareAddr(hs.peer.endpoint, from) {
-			hs.peer.endpoint = from
-			hs.peer.logger.Debug("Learned new endpoint", slog.Any("endpoint", from))
-		}
-
-		if err = hs.sendRespHello(); err != nil {
+		if err = hs.sendRespHello(from); err != nil {
 			return err
 		}
 
@@ -243,18 +236,11 @@ func (s *Server) handle(pl payload, from *net.UDPAddr) error {
 			return err
 		}
 
-		if err = hs.sendEmptyData(); err != nil {
+		if err = hs.sendEmptyData(from); err != nil {
 			return err
 		}
 
-		// Update peers endpoint of the init hello message
-		// has been received from an unknown address.
-		if hs.peer.endpoint == nil || !compareAddr(hs.peer.endpoint, from) {
-			hs.peer.endpoint = from
-			hs.peer.logger.Debug("Learned new endpoint", slog.Any("endpoint", from))
-		}
-
-		s.completeHandshake(&hs.handshake, RekeyAfterTimeResponder)
+		s.completeHandshake(&hs.handshake, from, RekeyAfterTimeResponder)
 
 	case *emptyData:
 		s.handshakesLock.RLock()
@@ -281,7 +267,7 @@ func (s *Server) handle(pl payload, from *net.UDPAddr) error {
 		delete(s.handshakes, hs.sidi)
 		s.handshakesLock.Unlock()
 
-		s.completeHandshake(&hs.handshake, RekeyAfterTimeInitiator)
+		s.completeHandshake(&hs.handshake, from, RekeyAfterTimeInitiator)
 
 	default:
 		return ErrInvalidMsgType
@@ -308,8 +294,13 @@ func (s *Server) initiateHandshake(p *peer) {
 	}
 }
 
-func (s *Server) completeHandshake(hs *handshake, rekeyAfter time.Duration) {
+func (s *Server) completeHandshake(hs *handshake, ep endpoint, rekeyAfter time.Duration) {
 	hs.peer.logger.Debug("Exchanged key with peer")
+
+	if hs.peer.endpoint == nil || !hs.peer.endpoint.Equal(ep) {
+		hs.peer.logger.Debug("Learned new endpoint", slog.Any("endpoint", ep))
+		hs.peer.endpoint = ep
+	}
 
 	for _, h := range s.handlers {
 		if h, ok := h.(HandshakeCompletedHandler); ok {

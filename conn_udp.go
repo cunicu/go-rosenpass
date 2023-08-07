@@ -4,24 +4,32 @@
 package rosenpass
 
 import (
+	"errors"
 	"fmt"
 	"net"
 
 	"golang.org/x/exp/slog"
 )
 
-//nolint:unused
-type endpoint interface {
-	String() string
-	Equal(endpoint) bool
+type udpEndpoint struct {
+	*net.UDPAddr
 }
 
-type receiveFunc func(spkm spk) (payload, *net.UDPAddr, error)
+func (ep *udpEndpoint) Equal(o endpoint) bool {
+	ep2, ok := o.(*udpEndpoint)
+	if !ok {
+		return false
+	}
 
-type conn interface {
-	Close() error
-	Open() ([]receiveFunc, error)
-	Send(pl payload, p *peer) error
+	if !ep.IP.Equal(ep2.IP) {
+		return false
+	}
+
+	if ep.Port != ep2.Port {
+		return false
+	}
+
+	return true
 }
 
 type udpConn struct {
@@ -48,7 +56,12 @@ func (s *udpConn) Close() error {
 	return nil
 }
 
-func (s *udpConn) Send(pl payload, p *peer) error {
+func (s *udpConn) Send(pl payload, spkt spk, ep endpoint) error {
+	uep, ok := ep.(*udpEndpoint)
+	if !ok {
+		return errors.New("invalid endpoint type")
+	}
+
 	e := envelope{
 		payload: pl,
 	}
@@ -64,7 +77,7 @@ func (s *udpConn) Send(pl payload, p *peer) error {
 		e.typ = msgTypeEmptyData
 	}
 
-	network := networkFromAddr(p.endpoint)
+	network := networkFromAddr(uep.UDPAddr)
 
 	// Check if we are on DragonFly or OpenBSD systems
 	// which require two independent sockets for listening
@@ -76,8 +89,8 @@ func (s *udpConn) Send(pl payload, p *peer) error {
 		}
 	}
 
-	buf := e.MarshalBinaryAndSeal(p.spkt)
-	if n, err := conn.WriteToUDP(buf, p.endpoint); err != nil {
+	buf := e.MarshalBinaryAndSeal(spkt)
+	if n, err := conn.WriteToUDP(buf, uep.UDPAddr); err != nil {
 		return err
 	} else if n != len(buf) {
 		return fmt.Errorf("partial write")
@@ -104,18 +117,6 @@ func (s *udpConn) open(networks map[string]*net.UDPAddr) ([]receiveFunc, error) 
 	return recvFncs, nil
 }
 
-func compareAddr(a, b *net.UDPAddr) bool {
-	if !a.IP.Equal(b.IP) {
-		return false
-	}
-
-	if a.Port != b.Port {
-		return false
-	}
-
-	return true
-}
-
 func networkFromAddr(a *net.UDPAddr) string {
 	if a.IP == nil {
 		return "udp"
@@ -129,7 +130,7 @@ func networkFromAddr(a *net.UDPAddr) string {
 }
 
 func receiveFromConn(conn *net.UDPConn) receiveFunc {
-	return func(spkm spk) (payload, *net.UDPAddr, error) {
+	return func(spkm spk) (payload, endpoint, error) {
 		// TODO: Check for appropriate MTU
 		buf := make([]byte, 1500)
 
@@ -145,6 +146,6 @@ func receiveFromConn(conn *net.UDPConn) receiveFunc {
 			return nil, nil, fmt.Errorf("parsed partial packet")
 		}
 
-		return e.payload, from, nil
+		return e.payload, &udpEndpoint{from}, nil
 	}
 }

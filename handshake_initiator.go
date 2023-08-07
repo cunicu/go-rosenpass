@@ -28,7 +28,7 @@ type initiatorHandshake struct {
 }
 
 // Step 1.
-func (hs *initiatorHandshake) sendInitHello() (*initHello, error) {
+func (hs *initiatorHandshake) sendInitHello() error {
 	var err error
 
 	// IHI1: Initialize the chaining key, and bind to the responder’s public key.
@@ -36,12 +36,12 @@ func (hs *initiatorHandshake) sendInitHello() (*initHello, error) {
 
 	// IHI2: The session ID is used to associate packets with the handshake state.
 	if hs.sidi, err = generateSessionID(); err != nil {
-		return nil, err
+		return err
 	}
 
 	// IHI3: Generate fresh ephemeral keys, for forward secrecy.
 	if hs.epki, hs.eski, err = generateEphemeralKeyPair(); err != nil {
-		return nil, err
+		return err
 	}
 
 	// IHI4: InitHello includes sidi and epki as part of the protocol transcript, and so we
@@ -52,14 +52,14 @@ func (hs *initiatorHandshake) sendInitHello() (*initHello, error) {
 	//       secret, and ciphertext into the chaining key, and authenticates the responder.
 	sctr, err := hs.encapAndMix(kemStatic, hs.peer.spkt[:])
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// IHI6: Tell the responder who the initiator is by transmitting the peer ID.
 	pidi := hs.server.PID()
 	pidiC, err := hs.encryptAndMix(pidi[:])
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// IHI7: Ensure the responder has the correct view on spki. Mix in the PSK as optional
@@ -70,18 +70,18 @@ func (hs *initiatorHandshake) sendInitHello() (*initHello, error) {
 	//       session state and protocol transcript at this point.
 	auth, err := hs.encryptAndMix([]byte{})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	hs.nextMsg = msgTypeRespHello
 
-	return &initHello{
+	return hs.send(&initHello{
 		sidi:  hs.sidi,
 		epki:  hs.epki,
 		sctr:  sct(sctr),
 		pidiC: [pidSize + authSize]byte(pidiC),
 		auth:  authTag(auth),
-	}, nil
+	})
 }
 
 // Step 4.
@@ -193,7 +193,7 @@ func (hs *initiatorHandshake) scheduleRetransmission(pl payload) {
 			hs.scheduleRetransmission(pl)
 		}
 
-		if err := hs.server.conn.Send(pl, hs.peer); err != nil {
+		if err := hs.server.conn.Send(pl, hs.peer.spkt, hs.peer.endpoint); err != nil {
 			hs.peer.logger.Error("Failed to send", slog.Any("error", err))
 		}
 	})
@@ -203,7 +203,7 @@ func (hs *initiatorHandshake) send(pl payload) error {
 	hs.txRetryCount = 0
 	hs.scheduleRetransmission(pl)
 
-	return hs.handshake.send(pl)
+	return hs.handshake.send(pl, hs.peer.endpoint)
 }
 
 // Helpers

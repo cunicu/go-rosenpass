@@ -18,9 +18,11 @@ func TestUDPConn(t *testing.T) {
 
 	p := &peer{
 		spkt: spk,
-		endpoint: &net.UDPAddr{
-			IP:   net.IPv6loopback,
-			Port: 1234,
+		endpoint: &udpEndpoint{
+			&net.UDPAddr{
+				IP:   net.IPv6loopback,
+				Port: 1234,
+			},
 		},
 	}
 
@@ -47,15 +49,15 @@ func TestUDPConn(t *testing.T) {
 		}(recvFnc)
 	}
 
-	eds := &emptyData{
+	pl := &emptyData{
 		sid: sid,
 	}
 
-	err = c.Send(eds, p)
+	err = c.Send(pl, spk, p.endpoint)
 	require.NoError(err)
 
 	edr := <-pls
-	require.Equal(edr, eds)
+	require.Equal(edr, pl)
 
 	err = c.Close()
 	require.NoError(err)
