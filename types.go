@@ -7,7 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 
-	"golang.org/x/crypto/blake2s"
+	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/chacha20poly1305"
 )
 
@@ -53,7 +53,7 @@ func msgTypeFromPayload(pl payload) msgType {
 }
 
 const (
-	hashSize = blake2s.Size
+	hashSize = blake2b.Size256
 
 	sidSize = 4        // Session ID size
 	pidSize = hashSize // Peer ID size
