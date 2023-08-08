@@ -165,14 +165,12 @@ func (s *Server) rotateBiscuitKey() error {
 	}
 
 	s.biscuitLock.Lock()
-	defer s.biscuitLock.Unlock()
-
 	oldBiscuitKey := s.biscuitKeys[0]
-
 	s.biscuitKeys = [2]key{
 		newBiscuitKey,
 		oldBiscuitKey,
 	}
+	s.biscuitLock.Unlock()
 
 	return nil
 }
