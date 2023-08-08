@@ -175,8 +175,12 @@ func (s *Server) rotateBiscuitKey() error {
 	return nil
 }
 
-func (s *Server) handle(pl payload, from endpoint) error {
-	var err error
+func (s *Server) handle(pl payload, from endpoint) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("recovered from panic: %v", r)
+		}
+	}()
 
 	mTyp := msgTypeFromPayload(pl)
 
