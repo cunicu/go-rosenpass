@@ -144,7 +144,7 @@ func (hs *initiatorHandshake) sendInitConf() error {
 
 // Step 8.
 func (hs *initiatorHandshake) handleEmptyData(e *emptyData) error {
-	n := append(e.ctr[:], 0, 0, 0, 0)
+	n := append(e.ctr[:], 0, 0, 0, 0) //nolint:gocritic
 	txnt := binary.LittleEndian.Uint64(e.ctr[:])
 
 	// TODO: Check nonce counter
