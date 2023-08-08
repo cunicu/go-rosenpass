@@ -40,7 +40,7 @@ func (hs *responderHandshake) handleInitHello(h *initHello) error {
 
 	var ok bool
 	if hs.peer, ok = hs.server.peers[pid(pidi)]; !ok {
-		return fmt.Errorf("failed to lookup peer %s (IHR6): %w", pid(pidi), ErrPeerNotFound)
+		return fmt.Errorf("failed to lookup peer %s (IHR6): %w", pid(pidi), errPeerNotFound)
 	}
 
 	// IHR7: Ensure the responder has the correct view on spki. Mix in the PSK as optional
@@ -50,7 +50,7 @@ func (hs *responderHandshake) handleInitHello(h *initHello) error {
 	// IHR8: Add a message authentication code to ensure both participants agree on the
 	//       session state and protocol transcript at this point.
 	if _, err := hs.decryptAndMix(h.auth[:]); err != nil {
-		return fmt.Errorf("%w (IHR8): %w", ErrInvalidAuthTag, err)
+		return fmt.Errorf("%w (IHR8): %w", errInvalidAuthTag, err)
 	}
 
 	return nil
@@ -127,12 +127,12 @@ func (hs *responderHandshake) handleInitConf(i *initConf) error {
 	// ICR4: Message authentication code for the same reason as above, which in particular
 	//       ensures that both participants agree on the final chaining key.
 	if _, err := hs.decryptAndMix(i.auth[:]); err != nil {
-		return fmt.Errorf("%w (ICR4): %w", ErrInvalidAuthTag, err)
+		return fmt.Errorf("%w (ICR4): %w", errInvalidAuthTag, err)
 	}
 
 	// ICR5: Biscuit replay detection.
 	if !bNo.Larger(hs.peer.biscuitUsed) {
-		return fmt.Errorf("%w (ICR5)", ErrReplayDetected)
+		return fmt.Errorf("%w (ICR5)", errReplayDetected)
 	} else if bNo.Equal(hs.peer.biscuitUsed) {
 		// This is a retransmitted InitConf message.
 		// We skip ICR6 & ICR6 and just reply with EmptyData
@@ -233,12 +233,12 @@ func (hs *responderHandshake) loadBiscuit(sb sealedBiscuit) (biscuitNo, error) {
 		// Find the peer and apply retransmission protection
 		var ok bool
 		if hs.peer, ok = hs.server.peers[b.pidi]; !ok {
-			return biscuitNo{}, ErrPeerNotFound
+			return biscuitNo{}, errPeerNotFound
 		}
 
 		// assert(pt.biscuit_no ≤ peer.biscuit_used);
 		if hs.peer.biscuitUsed.LargerOrEqual(b.biscuitNo) {
-			return biscuitNo{}, ErrReplayDetected
+			return biscuitNo{}, errReplayDetected
 		}
 
 		// Restore the chaining key
@@ -252,7 +252,7 @@ func (hs *responderHandshake) loadBiscuit(sb sealedBiscuit) (biscuitNo, error) {
 		return b.biscuitNo, nil
 	}
 
-	return biscuitNo{}, ErrInvalidBiscuit
+	return biscuitNo{}, errInvalidBiscuit
 }
 
 func (hs *responderHandshake) enterLive() {
