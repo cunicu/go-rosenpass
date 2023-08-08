@@ -200,9 +200,7 @@ func (s *Server) handle(pl payload, from endpoint) error {
 		}
 
 	case *respHello:
-		s.handshakesLock.RLock()
-		hs, ok := s.handshakes[req.sidi]
-		s.handshakesLock.RUnlock()
+		hs, ok := s.getHandshake(req.sidi)
 		if !ok {
 			return fmt.Errorf("%s: %s", ErrSessionNotFound, req.sidi)
 		}
@@ -241,10 +239,7 @@ func (s *Server) handle(pl payload, from endpoint) error {
 		s.completeHandshake(&hs.handshake, from, RekeyAfterTimeResponder)
 
 	case *emptyData:
-		s.handshakesLock.RLock()
-		hs, ok := s.handshakes[req.sid]
-		s.handshakesLock.RUnlock()
-
+		hs, ok := s.getHandshake(req.sid)
 		if !ok {
 			return fmt.Errorf("%s: %s", ErrSessionNotFound, req.sid)
 		}
@@ -261,10 +256,7 @@ func (s *Server) handle(pl payload, from endpoint) error {
 		hs.txTimer.Stop()
 		hs.expiryTimer.Stop()
 
-		s.handshakesLock.Lock()
-		delete(s.handshakes, hs.sidi)
-		s.handshakesLock.Unlock()
-
+		s.removeHandshake(hs)
 		s.completeHandshake(&hs.handshake, from, RekeyAfterTimeInitiator)
 
 	default:
@@ -272,6 +264,26 @@ func (s *Server) handle(pl payload, from endpoint) error {
 	}
 
 	return nil
+}
+
+func (s *Server) getHandshake(sid sid) (*initiatorHandshake, bool) {
+	s.handshakesLock.RLock()
+	hs, ok := s.handshakes[sid]
+	s.handshakesLock.RUnlock()
+
+	return hs, ok
+}
+
+func (s *Server) addHandshake(hs *initiatorHandshake) {
+	s.handshakesLock.Lock()
+	s.handshakes[hs.sidi] = hs
+	s.handshakesLock.Unlock()
+}
+
+func (s *Server) removeHandshake(hs *initiatorHandshake) {
+	s.handshakesLock.Lock()
+	delete(s.handshakes, hs.sidi)
+	s.handshakesLock.Unlock()
 }
 
 func (s *Server) initiateHandshake(p *peer) {
@@ -283,12 +295,10 @@ func (s *Server) initiateHandshake(p *peer) {
 		}
 	} else {
 		hs.expiryTimer = time.AfterFunc(RejectAfterTime, func() {
-			s.expireHandshake(&hs.handshake)
+			s.expireHandshake(hs)
 		})
 
-		s.handshakesLock.Lock()
-		s.handshakes[hs.sidi] = hs
-		s.handshakesLock.Unlock()
+		s.addHandshake(hs)
 	}
 }
 
@@ -319,12 +329,10 @@ func (s *Server) completeHandshake(hs *handshake, ep endpoint, rekeyAfter time.D
 	})
 }
 
-func (s *Server) expireHandshake(hs *handshake) {
+func (s *Server) expireHandshake(hs *initiatorHandshake) {
 	hs.peer.logger.Debug("Erasing outdated key from peer")
 
-	s.handshakesLock.Lock()
-	delete(s.handshakes, hs.sidi)
-	s.handshakesLock.Unlock()
+	s.removeHandshake(hs)
 
 	for _, h := range s.handlers {
 		if h, ok := h.(HandshakeExpiredHandler); ok {
