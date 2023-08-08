@@ -9,10 +9,10 @@ import (
 )
 
 var (
-	ErrMsgTruncated   = errors.New("message is truncated")
-	ErrInvalidLen     = errors.New("invalid message length")
-	ErrInvalidMsgType = errors.New("invalid message type")
-	ErrInvalidMAC     = errors.New("invalid mac")
+	errMsgTruncated   = errors.New("message is truncated")
+	errInvalidLen     = errors.New("invalid message length")
+	errInvalidMsgType = errors.New("invalid message type")
+	errInvalidMAC     = errors.New("invalid mac")
 )
 
 type payload interface {
@@ -40,7 +40,7 @@ func (e *envelope) MarshalBinaryAndSeal(spkt spk) []byte {
 
 func (e *envelope) CheckAndUnmarshalBinary(buf []byte, spkm spk) (int, error) {
 	if len(buf) < envelopeSize {
-		return -1, ErrMsgTruncated
+		return -1, errMsgTruncated
 	}
 
 	macOffset := len(buf) - macSize - cookieSize
@@ -49,7 +49,7 @@ func (e *envelope) CheckAndUnmarshalBinary(buf []byte, spkm spk) (int, error) {
 	macCalc := macKey[:macSize]
 
 	if subtle.ConstantTimeCompare(macWire, macCalc) != 1 {
-		return -1, ErrInvalidMAC
+		return -1, errInvalidMAC
 	}
 
 	return e.UnmarshalBinary(buf)
@@ -71,7 +71,7 @@ func (e *envelope) MarshalBinary() []byte {
 func (e *envelope) UnmarshalBinary(buf []byte) (int, error) {
 	lenPayload := len(buf) - envelopeSize
 	if lenPayload <= 0 {
-		return -1, ErrMsgTruncated
+		return -1, errMsgTruncated
 	}
 
 	mtype := msgType(buf[0])
@@ -86,7 +86,7 @@ func (e *envelope) UnmarshalBinary(buf []byte) (int, error) {
 	case msgTypeEmptyData:
 		e.payload = &emptyData{}
 	default:
-		return -1, ErrInvalidMsgType
+		return -1, errInvalidMsgType
 	}
 
 	o := 4
@@ -118,7 +118,7 @@ func (b *biscuit) MarshalBinary() []byte {
 
 func (b *biscuit) UnmarshalBinary(buf []byte) (int, error) {
 	if len(buf) != biscuitSize {
-		return -1, ErrInvalidLen
+		return -1, errInvalidLen
 	}
 
 	o := copy(b.pidi[:], buf)
@@ -147,7 +147,7 @@ func (m *initHello) MarshalBinary() []byte {
 
 func (m *initHello) UnmarshalBinary(buf []byte) (int, error) {
 	if len(buf) != initHelloMsgSize {
-		return -1, ErrInvalidLen
+		return -1, errInvalidLen
 	}
 
 	o := copy(m.sidi[:], buf)
@@ -184,7 +184,7 @@ func (m *respHello) MarshalBinary() []byte {
 
 func (m *respHello) UnmarshalBinary(buf []byte) (int, error) {
 	if len(buf) != respHelloMsgSize {
-		return -1, ErrInvalidLen
+		return -1, errInvalidLen
 	}
 
 	o := copy(m.sidr[:], buf)
@@ -218,7 +218,7 @@ func (m *initConf) MarshalBinary() []byte {
 
 func (m *initConf) UnmarshalBinary(buf []byte) (int, error) {
 	if len(buf) != initConfMsgSize {
-		return -1, ErrInvalidLen
+		return -1, errInvalidLen
 	}
 
 	o := copy(m.sidi[:], buf)
@@ -244,7 +244,7 @@ func (m *emptyData) MarshalBinary() []byte {
 
 func (m *emptyData) UnmarshalBinary(buf []byte) (int, error) {
 	if len(buf) != emptyDataMsgSize {
-		return -1, ErrInvalidLen
+		return -1, errInvalidLen
 	}
 
 	o := copy(m.sid[:], buf)

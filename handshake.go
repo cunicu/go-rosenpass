@@ -9,13 +9,13 @@ import (
 
 var (
 	// TODO: Only expose errors which are need on the public API.
-	ErrUnexpectedMsgType = errors.New("received unexpected message type")
-	ErrPeerNotFound      = errors.New("peer not found")
-	ErrSessionNotFound   = errors.New("session not found")
-	ErrInvalidAuthTag    = errors.New("invalid authentication tag")
-	ErrReplayDetected    = errors.New("detected replay")
-	ErrStaleNonce        = errors.New("stale nonce")
-	ErrInvalidBiscuit    = errors.New("failed decrypt biscuit")
+	errUnexpectedMsgType = errors.New("received unexpected message type")
+	errPeerNotFound      = errors.New("peer not found")
+	errSessionNotFound   = errors.New("session not found")
+	errInvalidAuthTag    = errors.New("invalid authentication tag")
+	errReplayDetected    = errors.New("detected replay")
+	errStaleNonce        = errors.New("stale nonce")
+	errInvalidBiscuit    = errors.New("failed decrypt biscuit")
 )
 
 type handshake struct {

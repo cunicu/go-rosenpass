@@ -12,7 +12,10 @@ import (
 	"golang.org/x/exp/slog"
 )
 
-var ErrMissingEndpoint = errors.New("missing endpoint")
+var (
+	errMissingEndpoint  = errors.New("missing endpoint")
+	errMissingPublicKey = errors.New("missing public key")
+)
 
 type PeerConfig struct {
 	PublicKey    spk // The peer’s public key
@@ -43,7 +46,7 @@ type peer struct {
 
 func (s *Server) newPeer(cfg PeerConfig) (*peer, error) {
 	if cfg.PublicKey == nil {
-		return nil, errors.New("missing public key")
+		return nil, errMissingPublicKey
 	}
 
 	p := &peer{
@@ -73,7 +76,7 @@ func (p *peer) PID() pid {
 
 func (p *peer) initiateHandshake() (*initiatorHandshake, error) {
 	if p.endpoint == nil {
-		return nil, ErrMissingEndpoint
+		return nil, errMissingEndpoint
 	}
 
 	hs := &initiatorHandshake{

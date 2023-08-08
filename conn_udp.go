@@ -11,6 +11,8 @@ import (
 	"golang.org/x/exp/slog"
 )
 
+var errInvalidEndpoint = errors.New("invalid endpoint type")
+
 type udpEndpoint struct {
 	*net.UDPAddr
 }
@@ -59,7 +61,7 @@ func (s *udpConn) Close() error {
 func (s *udpConn) Send(pl payload, spkt spk, ep endpoint) error {
 	uep, ok := ep.(*udpEndpoint)
 	if !ok {
-		return errors.New("invalid endpoint type")
+		return errInvalidEndpoint
 	}
 
 	e := envelope{

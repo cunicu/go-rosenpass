@@ -206,11 +206,11 @@ func (s *Server) handle(pl payload, from endpoint) (err error) {
 	case *respHello:
 		hs, ok := s.getHandshake(req.sidi)
 		if !ok {
-			return fmt.Errorf("%s: %s", ErrSessionNotFound, req.sidi)
+			return fmt.Errorf("%s: %s", errSessionNotFound, req.sidi)
 		}
 
 		if hs.nextMsg != msgTypeRespHello {
-			return fmt.Errorf("%w: %s", ErrUnexpectedMsgType, mTyp)
+			return fmt.Errorf("%w: %s", errUnexpectedMsgType, mTyp)
 		}
 
 		if err = hs.handleRespHello(req); err != nil {
@@ -245,11 +245,11 @@ func (s *Server) handle(pl payload, from endpoint) (err error) {
 	case *emptyData:
 		hs, ok := s.getHandshake(req.sid)
 		if !ok {
-			return fmt.Errorf("%s: %s", ErrSessionNotFound, req.sid)
+			return fmt.Errorf("%s: %s", errSessionNotFound, req.sid)
 		}
 
 		if hs.nextMsg != msgTypeEmptyData {
-			return fmt.Errorf("%w: %s", ErrUnexpectedMsgType, mTyp)
+			return fmt.Errorf("%w: %s", errUnexpectedMsgType, mTyp)
 		}
 
 		if err = hs.handleEmptyData(req); err != nil {
@@ -264,7 +264,7 @@ func (s *Server) handle(pl payload, from endpoint) (err error) {
 		s.completeHandshake(&hs.handshake, from, RekeyAfterTimeInitiator)
 
 	default:
-		return ErrInvalidMsgType
+		return errInvalidMsgType
 	}
 
 	return nil
@@ -292,7 +292,7 @@ func (s *Server) removeHandshake(hs *initiatorHandshake) {
 
 func (s *Server) initiateHandshake(p *peer) {
 	if hs, err := p.initiateHandshake(); err != nil {
-		if errors.Is(err, ErrMissingEndpoint) {
+		if errors.Is(err, errMissingEndpoint) {
 			p.logger.Debug("Skipping handshake due to missing endpoint")
 		} else {
 			p.logger.Error("Failed to initiate handshake for peer", slog.Any("error", err))

@@ -113,7 +113,7 @@ func (hs *initiatorHandshake) handleRespHello(r *respHello) error {
 
 	// RHI7: Add a message authentication code for the same reason as above.
 	if _, err := hs.decryptAndMix(r.auth[:]); err != nil {
-		return fmt.Errorf("%w (RHI7): %w", ErrInvalidAuthTag, err)
+		return fmt.Errorf("%w (RHI7): %w", errInvalidAuthTag, err)
 	}
 
 	return nil
@@ -149,7 +149,7 @@ func (hs *initiatorHandshake) handleEmptyData(e *emptyData) error {
 
 	// TODO: Check nonce counter
 	if txnt < hs.txnt {
-		return ErrStaleNonce
+		return errStaleNonce
 	}
 	hs.txnt = txnt
 
@@ -159,7 +159,7 @@ func (hs *initiatorHandshake) handleEmptyData(e *emptyData) error {
 	}
 
 	if _, err := aead.Open(nil, n, e.auth[:], []byte{}); err != nil {
-		return ErrInvalidAuthTag
+		return errInvalidAuthTag
 	}
 
 	return nil

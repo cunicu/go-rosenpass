@@ -17,6 +17,8 @@ const (
 	KeyOutputReasonStale     KeyOutputReason = "stale"
 )
 
+var errInvalidOutputFormat = errors.New("invalid output format")
+
 // Output format:
 // output-key peer {} key-file {of:?} {why}.
 type KeyOutput struct {
@@ -31,7 +33,7 @@ func ParseKeyOutput(str string) (o KeyOutput, err error) {
 	if tokens[0] != "output-key" ||
 		tokens[1] != "peer" ||
 		tokens[3] != "key-file" {
-		return o, errors.New("invalid output format")
+		return o, errInvalidOutputFormat
 	}
 
 	if o.Peer, err = ParsePeerID(tokens[2]); err != nil {
