@@ -304,7 +304,7 @@ func (s *Server) completeHandshake(hs *handshake, ep endpoint, rekeyAfter time.D
 
 	for _, h := range s.handlers {
 		if h, ok := h.(HandshakeCompletedHandler); ok {
-			h.HandshakeCompleted(hs.peer.PID(), hs.osk)
+			go h.HandshakeCompleted(hs.peer.PID(), hs.osk)
 		}
 	}
 
@@ -330,7 +330,7 @@ func (s *Server) expireHandshake(hs *handshake) {
 
 	for _, h := range s.handlers {
 		if h, ok := h.(HandshakeExpiredHandler); ok {
-			h.HandshakeExpired(hs.peer.PID())
+			go h.HandshakeExpired(hs.peer.PID())
 		}
 	}
 }
