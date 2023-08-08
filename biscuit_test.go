@@ -14,7 +14,7 @@ func TestBiscuitNo(t *testing.T) {
 
 	b0 := biscuitNo{}
 	b1 := biscuitNo{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-	require.True(b1.Equal(b1))
+	require.True(b1.Equal(b1)) //nolint:gocritic
 	require.True(b1.Equal(b0))
 	require.True(b1.LargerOrEqual(b0))
 
