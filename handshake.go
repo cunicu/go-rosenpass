@@ -5,6 +5,8 @@ package rosenpass
 
 import (
 	"errors"
+
+	"github.com/cloudflare/circl/kem"
 )
 
 var (
@@ -87,7 +89,7 @@ func (hs *handshake) decryptAndMix(ct []byte) ([]byte, error) {
 	return pt, nil
 }
 
-func (hs *handshake) encapAndMix(typ kemType, pk []byte) ([]byte, error) {
+func (hs *handshake) encapAndMix(typ kem.Scheme, pk []byte) ([]byte, error) {
 	kem, err := newKEM(typ, pk)
 	if err != nil {
 		return nil, err
@@ -103,7 +105,7 @@ func (hs *handshake) encapAndMix(typ kemType, pk []byte) ([]byte, error) {
 	return ct, nil
 }
 
-func (hs *handshake) decapAndMix(typ kemType, sk, pk, ct []byte) error {
+func (hs *handshake) decapAndMix(typ kem.Scheme, sk, pk, ct []byte) error {
 	kem, err := newKEM(typ, sk)
 	if err != nil {
 		return err
