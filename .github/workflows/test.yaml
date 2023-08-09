@@ -13,15 +13,11 @@ on:
 
 jobs:
   test:
-    name: Test ${{ matrix.cgo && 'with' || 'without' }} Cgo
+    name: Test
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        cgo: [true, false]
-
     env:
-      CGO_ENABLED: ${{ matrix.cgo && '1' || '0' }}
+      CGO_ENABLED: '0'
 
     steps:
     - name: Checkout
@@ -41,25 +37,6 @@ jobs:
         crate: rosenpass
         git: https://github.com/rosenpass/rosenpass
         commit: a2b177470c689c39ee9be01dced124f8d0053f9f
-
-    - name: Checkout liboqs
-      uses: actions/checkout@v3
-      with:
-        repository: open-quantum-safe/liboqs
-        ref: 0.8.0
-        path: liboqs
-      if: ${{ matrix.cgo }}
-  
-    - name: Install liboqs
-      run: |
-        mkdir -p liboqs/build && cd liboqs/build
-        cmake -GNinja \
-          -DOQS_BUILD_ONLY_LIB=ON \
-          -DOQS_MINIMAL_BUILD="KEM_kyber_512;KEM_classic_mceliece_460896" \
-          -DBUILD_SHARED_LIBS=ON \
-          -DCMAKE_INSTALL_PREFIX=/usr ..
-        sudo ninja install
-      if: ${{ matrix.cgo }}
 
     - name: Set up Go
       uses: actions/setup-go@v4

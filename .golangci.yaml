@@ -24,7 +24,6 @@ linters-settings:
         allow:
         - $gostd
         - github.com/stv0g/go-rosenpass
-        - github.com/open-quantum-safe/liboqs-go/oqs
         - github.com/pelletier/go-toml/v2
         - github.com/spf13/cobra
         - golang.org/x/crypto/blake2b
