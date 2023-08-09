@@ -5,6 +5,7 @@ package rosenpass_test
 
 import (
 	"encoding/base64"
+	"log/slog"
 	"math"
 	"math/rand"
 	"net"
@@ -14,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 	rp "github.com/stv0g/go-rosenpass"
 	"github.com/stv0g/go-rosenpass/internal/test"
-	"golang.org/x/exp/slog"
 )
 
 type handshakeHandler struct {

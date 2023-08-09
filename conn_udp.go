@@ -6,9 +6,8 @@ package rosenpass
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
-
-	"golang.org/x/exp/slog"
 )
 
 var errInvalidEndpoint = errors.New("invalid endpoint type")

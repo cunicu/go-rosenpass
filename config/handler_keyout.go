@@ -6,11 +6,11 @@ package config
 import (
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
 	rp "github.com/stv0g/go-rosenpass"
-	"golang.org/x/exp/slog"
 )
 
 type keyoutFileHandler struct {

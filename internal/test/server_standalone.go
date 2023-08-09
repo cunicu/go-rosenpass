@@ -9,13 +9,13 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 
 	rp "github.com/stv0g/go-rosenpass"
 	"github.com/stv0g/go-rosenpass/config"
-	"golang.org/x/exp/slog"
 )
 
 type StandaloneServer struct {

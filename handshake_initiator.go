@@ -7,10 +7,9 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"log/slog"
 	"math"
 	"time"
-
-	"golang.org/x/exp/slog"
 )
 
 type initiatorHandshake struct {

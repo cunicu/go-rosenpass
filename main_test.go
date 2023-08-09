@@ -4,12 +4,12 @@
 package rosenpass_test
 
 import (
+	"log/slog"
 	"os"
 	"testing"
 	"time"
 
 	rp "github.com/stv0g/go-rosenpass"
-	"golang.org/x/exp/slog"
 )
 
 func TestMain(m *testing.M) {

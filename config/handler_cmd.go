@@ -5,11 +5,11 @@ package config
 
 import (
 	"bytes"
+	"log/slog"
 	"os/exec"
 	"strings"
 
 	rp "github.com/stv0g/go-rosenpass"
-	"golang.org/x/exp/slog"
 )
 
 type exchangeCommandHandler struct {

@@ -4,9 +4,8 @@
 package rosenpass
 
 import (
+	"log/slog"
 	"net"
-
-	"golang.org/x/exp/slog"
 )
 
 type Config struct {
