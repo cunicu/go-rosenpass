@@ -7,9 +7,9 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 
 	rp "github.com/stv0g/go-rosenpass"
-	"golang.org/x/exp/slog"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )

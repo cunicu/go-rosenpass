@@ -4,13 +4,13 @@
 package main
 
 import (
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
-	"golang.org/x/exp/slog"
 )
 
 var (

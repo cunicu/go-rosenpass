@@ -6,9 +6,9 @@ package config
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 
 	rp "github.com/stv0g/go-rosenpass"
-	"golang.org/x/exp/slog"
 )
 
 var (

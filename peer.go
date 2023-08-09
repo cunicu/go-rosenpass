@@ -6,10 +6,9 @@ package rosenpass
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"time"
-
-	"golang.org/x/exp/slog"
 )
 
 var (

@@ -6,11 +6,10 @@ package rosenpass
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"sync"
 	"time"
-
-	"golang.org/x/exp/slog"
 )
 
 type Server struct {
