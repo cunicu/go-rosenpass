@@ -28,7 +28,9 @@ linters-settings:
         - github.com/spf13/cobra
         - golang.org/x/crypto/blake2b
         - golang.org/x/crypto/chacha20poly1305
-        - log/slog
+        - github.com/cloudflare/circl/kem
+        - github.com/cloudflare/circl/kem/kyber/kyber512
+        - github.com/cloudflare/circl/kem/mceliece/mceliece460896
         - golang.zx2c4.com/wireguard/wgctrl
         deny:
         - pkg: math/rand
