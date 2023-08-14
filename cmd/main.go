@@ -20,7 +20,7 @@ var (
 	genManOpts = doc.GenManTreeOptions{
 		CommandSeparator: "-",
 		Header: &doc.GenManHeader{
-			Source: "https://github.com/stv0g/go-rosenpass",
+			Source: "https://github.com/cunicu/go-rosenpass",
 		},
 	}
 

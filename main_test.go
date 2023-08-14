@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	rp "github.com/stv0g/go-rosenpass"
+	rp "cunicu.li/go-rosenpass"
 )
 
 func TestMain(m *testing.M) {

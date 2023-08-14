@@ -9,7 +9,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	rp "github.com/stv0g/go-rosenpass"
+	rp "cunicu.li/go-rosenpass"
+
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )

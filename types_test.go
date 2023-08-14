@@ -6,8 +6,9 @@ package rosenpass_test
 import (
 	"testing"
 
+	rp "cunicu.li/go-rosenpass"
+
 	"github.com/stretchr/testify/require"
-	rp "github.com/stv0g/go-rosenpass"
 )
 
 func TestKey(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"strings"
 
-	rp "github.com/stv0g/go-rosenpass"
+	rp "cunicu.li/go-rosenpass"
 )
 
 type exchangeCommandHandler struct {

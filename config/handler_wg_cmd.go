@@ -6,7 +6,7 @@
 package config
 
 import (
-	rp "github.com/stv0g/go-rosenpass"
+	rp "cunicu.li/go-rosenpass"
 )
 
 type wireGuardHandler struct {

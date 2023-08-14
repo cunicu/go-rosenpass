@@ -14,8 +14,9 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	rp "github.com/stv0g/go-rosenpass"
-	"github.com/stv0g/go-rosenpass/config"
+	"cunicu.li/go-rosenpass/config"
+
+	rp "cunicu.li/go-rosenpass"
 )
 
 type StandaloneServer struct {
