@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	rp "github.com/stv0g/go-rosenpass"
+	rp "cunicu.li/go-rosenpass"
 )
 
 type keyoutFileHandler struct {

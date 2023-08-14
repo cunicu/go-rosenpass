@@ -10,8 +10,9 @@ import (
 	"os"
 	"path/filepath"
 
+	rp "cunicu.li/go-rosenpass"
+
 	"github.com/pelletier/go-toml/v2"
-	rp "github.com/stv0g/go-rosenpass"
 )
 
 type File struct {

@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"log/slog"
 
+	"cunicu.li/go-rosenpass/config"
+
 	"github.com/spf13/cobra"
-	"github.com/stv0g/go-rosenpass/config"
 )
 
 func validate(_ *cobra.Command, args []string) error {

@@ -12,9 +12,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"cunicu.li/go-rosenpass/internal/test"
+
+	rp "cunicu.li/go-rosenpass"
+
 	"github.com/stretchr/testify/require"
-	rp "github.com/stv0g/go-rosenpass"
-	"github.com/stv0g/go-rosenpass/internal/test"
 )
 
 type handshakeHandler struct {

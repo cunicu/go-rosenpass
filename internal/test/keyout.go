@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 
-	rp "github.com/stv0g/go-rosenpass"
+	rp "cunicu.li/go-rosenpass"
 )
 
 func readKeyOutFile(fn string) (rp.Key, error) {

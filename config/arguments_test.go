@@ -6,8 +6,9 @@ package config_test
 import (
 	"testing"
 
+	"cunicu.li/go-rosenpass/config"
+
 	"github.com/stretchr/testify/require"
-	"github.com/stv0g/go-rosenpass/config"
 )
 
 func TestArguments(t *testing.T) {

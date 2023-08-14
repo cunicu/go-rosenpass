@@ -1,11 +1,11 @@
 # go-rosenpass
 
-<!-- [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/stv0g/go-rosenpass/test.yaml?style=flat-square)](https://github.com/stv0g/go-rosenpass/actions) -->
-[![Codecov branch](https://img.shields.io/codecov/c/github/stv0g/go-rosenpass/master?style=flat-square&token=xUGG2iEsuQ)](https://app.codecov.io/gh/stv0g/go-rosenpass/tree/master)
-[![goreportcard](https://goreportcard.com/badge/github.com/stv0g/go-rosenpass?style=flat-square)](https://goreportcard.com/report/github.com/stv0g/go-rosenpass)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](https://github.com/stv0g/go-rosenpass/blob/master/LICENSES/Apache-2.0.txt)
-![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/stv0g/go-rosenpass?style=flat-square)
-[![Go Reference](https://pkg.go.dev/badge/github.com/stv0g/go-rosenpass.svg)](https://pkg.go.dev/github.com/stv0g/go-rosenpass)
+<!-- [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/cunicu/go-rosenpass/test.yaml?style=flat-square)](https://github.com/cunicu/go-rosenpass/actions) -->
+[![Codecov branch](https://img.shields.io/codecov/c/github/cunicu/go-rosenpass/master?style=flat-square&token=xUGG2iEsuQ)](https://app.codecov.io/gh/cunicu/go-rosenpass/tree/master)
+[![goreportcard](https://goreportcard.com/badge/github.com/cunicu/go-rosenpass?style=flat-square)](https://goreportcard.com/report/github.com/cunicu/go-rosenpass)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](https://github.com/cunicu/go-rosenpass/blob/master/LICENSES/Apache-2.0.txt)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/cunicu/go-rosenpass?style=flat-square)
+[![Go Reference](https://pkg.go.dev/badge/github.com/cunicu/go-rosenpass.svg)](https://pkg.go.dev/github.com/cunicu/go-rosenpass)
 
 🚧 go-rosenpass has not been audited. Please use with care!
 
@@ -20,7 +20,7 @@ The implementation aims to be compatible with the reference implementation in Ru
 
 ### Pre-build binaries
 
-_go-rosenpass_ distributes builds via [GitHub Releases](https://github.com/stv0g/go-rosenpass/releases).
+_go-rosenpass_ distributes builds via [GitHub Releases](https://github.com/cunicu/go-rosenpass/releases).
 You can download a pre-built binary from there.
 
 ## References

@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"os"
 
+	"cunicu.li/go-rosenpass/config"
+
+	rp "cunicu.li/go-rosenpass"
+
 	"github.com/spf13/cobra"
-	rp "github.com/stv0g/go-rosenpass"
-	"github.com/stv0g/go-rosenpass/config"
 )
 
 func genConfig(_ *cobra.Command, args []string) error {

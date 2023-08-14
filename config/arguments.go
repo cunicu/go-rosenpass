@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	rp "github.com/stv0g/go-rosenpass"
+	rp "cunicu.li/go-rosenpass"
 )
 
 var (

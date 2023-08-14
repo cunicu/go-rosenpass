@@ -10,8 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/stv0g/go-rosenpass"
-	rp "github.com/stv0g/go-rosenpass"
+	rp "cunicu.li/go-rosenpass"
 )
 
 type WireGuardSection struct {
@@ -42,7 +41,7 @@ type PeerSection struct {
 	WireGuard *WireGuardSection `toml:"wireguard,inline" comment:"Settings for directly configuring a WireGuard peer with the negotiated PSK"`
 }
 
-func (ps *PeerSection) ToConfig() (pc rosenpass.PeerConfig, err error) {
+func (ps *PeerSection) ToConfig() (pc rp.PeerConfig, err error) {
 	if pc.PublicKey, err = os.ReadFile(ps.PublicKey); err != nil {
 		return pc, fmt.Errorf("failed to read public key: %w", err)
 	}

@@ -6,9 +6,11 @@ package main
 import (
 	"fmt"
 
+	"cunicu.li/go-rosenpass/config"
+
+	rp "cunicu.li/go-rosenpass"
+
 	"github.com/spf13/cobra"
-	rp "github.com/stv0g/go-rosenpass"
-	"github.com/stv0g/go-rosenpass/config"
 )
 
 func exchange(_ *cobra.Command, args []string) error {
