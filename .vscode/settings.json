@@ -30,5 +30,21 @@
         "txnt",
         "xaead",
         "XAEAD"
-    ]
+    ],
+    "gopls": {
+        "ui.codelenses": { 
+            "generate": true,
+            "gc_details": true  
+        },
+        "ui.diagnostic.analyses": {
+            "unusedvariable": true,
+        },
+        "ui.diagnostic.annotations": {
+            "escape": true,
+        },
+        "ui.semanticTokens": true,
+    },
+    "go.enableCodeLens": {
+        "runtest": true 
+    },
 }
