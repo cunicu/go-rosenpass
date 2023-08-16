@@ -121,7 +121,7 @@ func (hs *handshake) decapAndMix(typ kem.Scheme, sk, pk, ct []byte) error {
 	return nil
 }
 
-func (hs *handshake) send(pl payload, ep endpoint) error {
+func (hs *handshake) send(pl Payload, ep Endpoint) error {
 	hs.peer.logger.Debug("Sending message", "type", msgTypeFromPayload(pl))
 
 	return hs.server.conn.Send(pl, hs.peer.spkt, ep)

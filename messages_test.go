@@ -119,7 +119,7 @@ func TestMessages(t *testing.T) {
 func FuzzEnvelope(f *testing.F) {
 	f.Add([]byte{})
 	f.Fuzz(func(t *testing.T, b []byte) {
-		var e envelope
+		var e Envelope
 		e.UnmarshalBinary(b) //nolint:errcheck
 	})
 }

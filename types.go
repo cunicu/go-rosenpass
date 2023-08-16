@@ -37,7 +37,7 @@ func (t msgType) String() string {
 	}
 }
 
-func msgTypeFromPayload(pl payload) msgType {
+func msgTypeFromPayload(pl Payload) msgType {
 	switch pl.(type) {
 	case *initHello:
 		return msgTypeInitHello

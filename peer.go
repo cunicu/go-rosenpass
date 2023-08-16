@@ -32,8 +32,8 @@ type peer struct {
 
 	rekeyTimer *time.Timer
 
-	initialEndpoint endpoint // The peers's endpoint as configured
-	endpoint        endpoint // The peers's endpoint as learned from its last packet
+	initialEndpoint Endpoint // The peers's endpoint as configured
+	endpoint        Endpoint // The peers's endpoint as learned from its last packet
 
 	spkt spk // The peer’s public key
 	psk  key // The peer's pre-shared key

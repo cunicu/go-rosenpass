@@ -15,19 +15,19 @@ var (
 	errInvalidMAC     = errors.New("invalid mac")
 )
 
-type payload interface {
+type Payload interface {
 	MarshalBinary() []byte
 	UnmarshalBinary(data []byte) (int, error)
 }
 
-type envelope struct {
+type Envelope struct {
 	typ     msgType // Type of this message
-	payload payload // The actual payload
+	payload Payload // The actual payload
 	mac     mac     // Message Authentication Code (mac) over all bytes until (exclusive) mac itself
 	cookie  cookie  // Currently unused, TODO: do something with this
 }
 
-func (e *envelope) MarshalBinaryAndSeal(spkt spk) []byte {
+func (e *Envelope) MarshalBinaryAndSeal(spkt spk) []byte {
 	buf := e.MarshalBinary()
 
 	macOffset := len(buf) - macSize - cookieSize
@@ -38,7 +38,7 @@ func (e *envelope) MarshalBinaryAndSeal(spkt spk) []byte {
 	return buf
 }
 
-func (e *envelope) CheckAndUnmarshalBinary(buf []byte, spkm spk) (int, error) {
+func (e *Envelope) CheckAndUnmarshalBinary(buf []byte, spkm spk) (int, error) {
 	if len(buf) < envelopeSize {
 		return -1, errMsgTruncated
 	}
@@ -55,7 +55,7 @@ func (e *envelope) CheckAndUnmarshalBinary(buf []byte, spkm spk) (int, error) {
 	return e.UnmarshalBinary(buf)
 }
 
-func (e *envelope) MarshalBinary() []byte {
+func (e *Envelope) MarshalBinary() []byte {
 	mTyp := msgTypeFromPayload(e.payload)
 
 	header := []byte{uint8(mTyp), 0, 0, 0}
@@ -68,7 +68,7 @@ func (e *envelope) MarshalBinary() []byte {
 		e.cookie[:])
 }
 
-func (e *envelope) UnmarshalBinary(buf []byte) (int, error) {
+func (e *Envelope) UnmarshalBinary(buf []byte) (int, error) {
 	lenPayload := len(buf) - envelopeSize
 	if lenPayload <= 0 {
 		return -1, errMsgTruncated

@@ -26,7 +26,7 @@ type Server struct {
 	handshakes     map[sid]*initiatorHandshake // A lookup table mapping the session ID to the ongoing initiator handshake or live session
 	handshakesLock sync.RWMutex                // Protects handshakes
 
-	conn   conn
+	conn   Conn
 	logger *slog.Logger
 }
 
@@ -37,7 +37,7 @@ func NewUDPServer(cfg Config) (*Server, error) {
 	}
 
 	var err error
-	if cfg.Conn, err = newUDPConn(cfg.ListenAddrs); err != nil {
+	if cfg.Conn, err = NewUDPConn(cfg.ListenAddrs); err != nil {
 		return nil, err
 	}
 
@@ -71,11 +71,6 @@ func NewServer(cfg Config) (*Server, error) {
 		s.logger = slog.Default()
 	}
 
-	recvFncs, err := s.conn.Open()
-	if err != nil {
-		return nil, fmt.Errorf("failed to open listeners: %w", err)
-	}
-
 	for _, pCfg := range cfg.Peers {
 		pCfg := pCfg
 
@@ -89,8 +84,15 @@ func NewServer(cfg Config) (*Server, error) {
 		s.peers[p.PID()] = p
 	}
 
-	for _, recvFnc := range recvFncs {
-		go s.receiveLoop(recvFnc)
+	if s.conn != nil {
+		recvFncs, err := s.conn.Open()
+		if err != nil {
+			return nil, fmt.Errorf("failed to open listeners: %w", err)
+		}
+
+		for _, recvFnc := range recvFncs {
+			go s.receiveLoop(recvFnc)
+		}
 	}
 
 	go s.biscuitLoop()
@@ -128,7 +130,7 @@ func (s *Server) Run() error {
 	return nil
 }
 
-func (s *Server) receiveLoop(recvFnc receiveFunc) {
+func (s *Server) receiveLoop(recvFnc ReceiveFunc) {
 	for {
 		pl, from, err := recvFnc(s.spkm)
 		if err != nil {
@@ -140,7 +142,7 @@ func (s *Server) receiveLoop(recvFnc receiveFunc) {
 			continue
 		}
 
-		if err := s.handle(pl, from); err != nil {
+		if err := s.HandleMessage(pl, from); err != nil {
 			s.logger.Error("Failed to handle message", "error", err)
 			continue
 		}
@@ -174,7 +176,7 @@ func (s *Server) rotateBiscuitKey() error {
 	return nil
 }
 
-func (s *Server) handle(pl payload, from endpoint) (err error) {
+func (s *Server) HandleMessage(pl Payload, from Endpoint) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("recovered from panic: %v", r)
@@ -305,7 +307,7 @@ func (s *Server) initiateHandshake(p *peer) {
 	}
 }
 
-func (s *Server) completeHandshake(hs *handshake, ep endpoint, rekeyAfter time.Duration) {
+func (s *Server) completeHandshake(hs *handshake, ep Endpoint, rekeyAfter time.Duration) {
 	hs.peer.logger.Debug("Exchanged key with peer")
 
 	if hs.peer.endpoint == nil || !hs.peer.endpoint.Equal(ep) {

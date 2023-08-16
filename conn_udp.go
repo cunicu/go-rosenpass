@@ -10,13 +10,15 @@ import (
 	"net"
 )
 
+var _ Conn = (*UDPConn)(nil)
+
 var errInvalidEndpoint = errors.New("invalid endpoint type")
 
 type udpEndpoint struct {
 	*net.UDPAddr
 }
 
-func (ep *udpEndpoint) Equal(o endpoint) bool {
+func (ep *udpEndpoint) Equal(o Endpoint) bool {
 	ep2, ok := o.(*udpEndpoint)
 	if !ok {
 		return false
@@ -33,22 +35,22 @@ func (ep *udpEndpoint) Equal(o endpoint) bool {
 	return true
 }
 
-type udpConn struct {
+type UDPConn struct {
 	listenAddrs []*net.UDPAddr
 	conns       map[string]*net.UDPConn
 
 	logger *slog.Logger
 }
 
-func newUDPConn(la []*net.UDPAddr) (*udpConn, error) {
-	return &udpConn{
+func NewUDPConn(la []*net.UDPAddr) (*UDPConn, error) {
+	return &UDPConn{
 		listenAddrs: la,
 		conns:       map[string]*net.UDPConn{},
 		logger:      slog.Default(),
 	}, nil
 }
 
-func (s *udpConn) Close() error {
+func (s *UDPConn) Close() error {
 	for _, conn := range s.conns {
 		if err := conn.Close(); err != nil {
 			return err
@@ -57,13 +59,13 @@ func (s *udpConn) Close() error {
 	return nil
 }
 
-func (s *udpConn) Send(pl payload, spkt spk, ep endpoint) error {
+func (s *UDPConn) Send(pl Payload, spkt spk, ep Endpoint) error {
 	uep, ok := ep.(*udpEndpoint)
 	if !ok {
 		return errInvalidEndpoint
 	}
 
-	e := envelope{
+	e := Envelope{
 		payload: pl,
 	}
 
@@ -100,8 +102,8 @@ func (s *udpConn) Send(pl payload, spkt spk, ep endpoint) error {
 	return nil
 }
 
-func (s *udpConn) open(networks map[string]*net.UDPAddr) ([]receiveFunc, error) {
-	recvFncs := []receiveFunc{}
+func (s *UDPConn) open(networks map[string]*net.UDPAddr) ([]ReceiveFunc, error) {
+	recvFncs := []ReceiveFunc{}
 
 	for network, listenAddr := range networks {
 		conn, err := net.ListenUDP(network, listenAddr)
@@ -130,8 +132,8 @@ func networkFromAddr(a *net.UDPAddr) string {
 	return "udp6"
 }
 
-func receiveFromConn(conn *net.UDPConn) receiveFunc {
-	return func(spkm spk) (payload, endpoint, error) {
+func receiveFromConn(conn *net.UDPConn) ReceiveFunc {
+	return func(pkm spk) (Payload, Endpoint, error) {
 		// TODO: Check for appropriate MTU
 		buf := make([]byte, 1500)
 
@@ -140,7 +142,7 @@ func receiveFromConn(conn *net.UDPConn) receiveFunc {
 			return nil, nil, fmt.Errorf("failed to read: %w", err)
 		}
 
-		e := &envelope{}
+		e := &Envelope{}
 		if m, err := e.CheckAndUnmarshalBinary(buf[:n], spkm); err != nil {
 			return nil, nil, fmt.Errorf("received malformed packet: %w", err)
 		} else if m != n {
