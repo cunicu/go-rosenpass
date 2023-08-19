@@ -11,8 +11,8 @@ import (
 type Config struct {
 	ListenAddrs []*net.UDPAddr
 
-	PublicKey spk
-	SecretKey ssk
+	PublicKey []byte
+	SecretKey []byte
 
 	Peers    []PeerConfig
 	Handlers []Handler

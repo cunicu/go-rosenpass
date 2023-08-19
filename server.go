@@ -50,9 +50,17 @@ func NewServer(cfg Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to generate biscuit key: %w", err)
 	}
 
+	if len(cfg.PublicKey) != spkSize {
+		return nil, fmt.Errorf("invalid public key length")
+	}
+
+	if len(cfg.SecretKey) != sskSize {
+		return nil, fmt.Errorf("invalid secret key length")
+	}
+
 	s := &Server{
-		spkm:     cfg.PublicKey,
-		sskm:     cfg.SecretKey,
+		spkm:     spk(cfg.PublicKey),
+		sskm:     ssk(cfg.SecretKey),
 		handlers: cfg.Handlers,
 
 		biscuitKeys: [2]key{

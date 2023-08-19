@@ -31,7 +31,7 @@ func (e *Envelope) MarshalBinaryAndSeal(spkt spk) []byte {
 	buf := e.MarshalBinary()
 
 	macOffset := len(buf) - macSize - cookieSize
-	macKey := khMAC.hash(spkt, buf[:macOffset])
+	macKey := khMAC.hash(spkt[:], buf[:macOffset])
 
 	copy(buf[macOffset:], macKey[:macSize])
 
@@ -45,7 +45,7 @@ func (e *Envelope) CheckAndUnmarshalBinary(buf []byte, spkm spk) (int, error) {
 
 	macOffset := len(buf) - macSize - cookieSize
 	macWire := buf[macOffset : macOffset+macSize]
-	macKey := khMAC.hash(spkm, buf[:macOffset])
+	macKey := khMAC.hash(spkm[:], buf[:macOffset])
 	macCalc := macKey[:macSize]
 
 	if subtle.ConstantTimeCompare(macWire, macCalc) != 1 {
@@ -68,15 +68,16 @@ func (e *Envelope) MarshalBinary() []byte {
 		e.cookie[:])
 }
 
-func (e *Envelope) UnmarshalBinary(buf []byte) (int, error) {
+func (e *Envelope) UnmarshalBinary(buf []byte) (o int, err error) {
 	lenPayload := len(buf) - envelopeSize
 	if lenPayload <= 0 {
 		return -1, errMsgTruncated
 	}
 
-	mtype := msgType(buf[0])
+	mType := msgType(buf[0])
+	o += 4
 
-	switch mtype {
+	switch mType {
 	case msgTypeInitHello:
 		e.payload = &initHello{}
 	case msgTypeRespHello:
@@ -88,8 +89,6 @@ func (e *Envelope) UnmarshalBinary(buf []byte) (int, error) {
 	default:
 		return -1, errInvalidMsgType
 	}
-
-	o := 4
 
 	p, err := e.payload.UnmarshalBinary(buf[o : o+lenPayload])
 	if err != nil {
@@ -116,12 +115,12 @@ func (b *biscuit) MarshalBinary() []byte {
 		b.ck[:])
 }
 
-func (b *biscuit) UnmarshalBinary(buf []byte) (int, error) {
+func (b *biscuit) UnmarshalBinary(buf []byte) (o int, err error) {
 	if len(buf) != biscuitSize {
 		return -1, errInvalidLen
 	}
 
-	o := copy(b.pidi[:], buf)
+	o += copy(b.pidi[:], buf[o:])
 	o += copy(b.biscuitNo[:], buf[o:])
 	o += copy(b.ck[:], buf[o:])
 
@@ -145,16 +144,16 @@ func (m *initHello) MarshalBinary() []byte {
 		m.auth[:])
 }
 
-func (m *initHello) UnmarshalBinary(buf []byte) (int, error) {
+func (m *initHello) UnmarshalBinary(buf []byte) (o int, err error) {
 	if len(buf) != initHelloMsgSize {
 		return -1, errInvalidLen
 	}
 
-	o := copy(m.sidi[:], buf)
+	o += copy(m.sidi[:], buf[o:])
 
-	m.epki = buf[o : o+epkSize]
+	m.epki = epk(buf[o:])
 	o += epkSize
-	m.sctr = buf[o : o+sctSize]
+	m.sctr = sct(buf[o:])
 	o += sctSize
 
 	o += copy(m.pidiC[:], buf[o:])
@@ -182,17 +181,17 @@ func (m *respHello) MarshalBinary() []byte {
 		m.biscuit[:])
 }
 
-func (m *respHello) UnmarshalBinary(buf []byte) (int, error) {
+func (m *respHello) UnmarshalBinary(buf []byte) (o int, err error) {
 	if len(buf) != respHelloMsgSize {
 		return -1, errInvalidLen
 	}
 
-	o := copy(m.sidr[:], buf)
+	o += copy(m.sidr[:], buf[o:])
 	o += copy(m.sidi[:], buf[o:])
 
-	m.ecti = buf[o : o+ectSize]
+	m.ecti = ect(buf[o:])
 	o += ectSize
-	m.scti = buf[o : o+sctSize]
+	m.scti = sct(buf[o:])
 	o += sctSize
 
 	o += copy(m.auth[:], buf[o:])
@@ -216,12 +215,12 @@ func (m *initConf) MarshalBinary() []byte {
 		m.auth[:])
 }
 
-func (m *initConf) UnmarshalBinary(buf []byte) (int, error) {
+func (m *initConf) UnmarshalBinary(buf []byte) (o int, err error) {
 	if len(buf) != initConfMsgSize {
 		return -1, errInvalidLen
 	}
 
-	o := copy(m.sidi[:], buf)
+	o += copy(m.sidi[:], buf[o:])
 	o += copy(m.sidr[:], buf[o:])
 	o += copy(m.biscuit[:], buf[o:])
 	o += copy(m.auth[:], buf[o:])
@@ -242,12 +241,12 @@ func (m *emptyData) MarshalBinary() []byte {
 		m.auth[:])
 }
 
-func (m *emptyData) UnmarshalBinary(buf []byte) (int, error) {
+func (m *emptyData) UnmarshalBinary(buf []byte) (o int, err error) {
 	if len(buf) != emptyDataMsgSize {
 		return -1, errInvalidLen
 	}
 
-	o := copy(m.sid[:], buf)
+	o += copy(m.sid[:], buf[o:])
 	o += copy(m.ctr[:], buf[o:])
 	o += copy(m.auth[:], buf[o:])
 

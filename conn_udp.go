@@ -133,7 +133,7 @@ func networkFromAddr(a *net.UDPAddr) string {
 }
 
 func receiveFromConn(conn *net.UDPConn) ReceiveFunc {
-	return func(pkm spk) (Payload, Endpoint, error) {
+	return func(spkm spk) (Payload, Endpoint, error) {
 		// TODO: Check for appropriate MTU
 		buf := make([]byte, 1500)
 

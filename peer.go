@@ -17,14 +17,14 @@ var (
 )
 
 type PeerConfig struct {
-	PublicKey    spk // The peer’s public key
-	PresharedKey key // The peer's pre-shared key
+	PublicKey    []byte // The peer’s public key
+	PresharedKey key    // The peer's pre-shared key
 
 	Endpoint *net.UDPAddr // The peers's endpoint
 }
 
 func (p *PeerConfig) PID() PeerID { //nolint:revive
-	return pid(khPeerID.hash(p.PublicKey[:]))
+	return pid(khPeerID.hash(p.PublicKey))
 }
 
 type peer struct {
@@ -48,11 +48,15 @@ func (s *Server) newPeer(cfg PeerConfig) (*peer, error) {
 		return nil, errMissingPublicKey
 	}
 
+	if len(cfg.PublicKey) != spkSize {
+		return nil, fmt.Errorf("invalid public key length")
+	}
+
 	p := &peer{
 		server: s,
 
 		initialEndpoint: &udpEndpoint{cfg.Endpoint},
-		spkt:            cfg.PublicKey,
+		spkt:            spk(cfg.PublicKey),
 		psk:             cfg.PresharedKey,
 	}
 

@@ -71,10 +71,9 @@ const (
 	ckSize  = hashSize // Chaining key size
 
 	// Classic McEliece 460896 sizes.
-	sctSize       = mceliece460896.CiphertextSize // Static Cipher-text size
-	spkSize       = mceliece460896.PublicKeySize  // Static public key size
-	sskSize       = mceliece460896.PrivateKeySize // Static secret key size
-	sskSizeRound2 = 13568                         // Static secret key size (Round 2 implementation)
+	sctSize = mceliece460896.CiphertextSize // Static Cipher-text size
+	spkSize = mceliece460896.PublicKeySize  // Static public key size
+	sskSize = mceliece460896.PrivateKeySize // Static secret key size
 
 	// Kyber-512 sizes.
 	ectSize = kyber512.CiphertextSize // Ephemeral cipher text size
@@ -110,22 +109,25 @@ type (
 	sid           [sidSize]byte // Session ID
 	pid           [pidSize]byte // Peer ID
 	sealedBiscuit [sealedBiscuitSize]byte
-
-	sct []byte // Static Cipher-text
-	spk []byte // Static public key
-	ssk []byte // Static secret key
-	ect []byte // Ephemeral cipher text size
-	epk []byte // Ephemeral public key size
-	esk []byte // Ephemeral secret key size
+	sct           [sctSize]byte // Static Cipher-text
+	spk           [spkSize]byte // Static public key
+	ssk           [sskSize]byte // Static secret key
+	ect           [ectSize]byte // Ephemeral cipher text size
+	epk           [epkSize]byte // Ephemeral public key size
+	esk           [eskSize]byte // Ephemeral secret key size
 
 	// Some aliases for the public API.
-	PeerID = pid
-
+	PeerID       = pid
+	Key          = key
 	PresharedKey = key
 	PublicKey    = spk
 	SecretKey    = ssk
-	Key          = key
 )
+
+func (s spk) IsSet() bool {
+	empty := spk{}
+	return s != empty
+}
 
 func ParsePeerID(s string) (pid, error) { //nolint:revive
 	p, err := base64.StdEncoding.DecodeString(s)

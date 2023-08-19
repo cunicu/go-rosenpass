@@ -19,6 +19,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	sskSizeRound2 = 13568 // Static secret key size (Round 2 implementation)
+)
+
 type handshakeHandler struct {
 	keys    chan rp.Key
 	expired chan rp.PeerID
@@ -32,24 +36,57 @@ func (h *handshakeHandler) HandshakeExpired(pid rp.PeerID) {
 	h.expired <- pid
 }
 
+func generateKeyPair() ([]byte, []byte, error) {
+	spk, ssk, err := rp.GenerateKeyPair()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return spk[:], ssk[:], nil
+}
+
+// GenerateKeyPair generates a new Classic McEliece key pair in its old (round 2) format.
+func generateRound2KeyPair() ([]byte, []byte, error) { //nolint:revive
+	spk, ssk, err := rp.GenerateKeyPair()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Convert a secret key from its round 3 to round 2 format
+	if len(ssk) == 13608 {
+		g := ssk[40:232]
+		a := ssk[232:13032]
+		s := ssk[13032:13608]
+
+		ssk2 := make([]byte, 0, sskSizeRound2)
+		ssk2 = append(ssk2, s...)
+		ssk2 = append(ssk2, g...)
+		ssk2 = append(ssk2, a...)
+
+		return spk[:], ssk2, nil
+	}
+
+	return spk[:], ssk[:], nil
+}
+
 func TestServer(t *testing.T) {
 	run := func(t *testing.T, newGoServer, newRustServer func(*testing.T, string, rp.Config) (test.Server, error), numHandshakes int) {
 		t.Run("Go-to-Go", func(t *testing.T) {
-			testHandshake(t, newGoServer, newGoServer, rp.GenerateKeyPair, rp.GenerateKeyPair, numHandshakes)
+			testHandshake(t, newGoServer, newGoServer, generateKeyPair, generateKeyPair, numHandshakes)
 		})
 
 		t.Run("Rust-to-Go", func(t *testing.T) {
-			testHandshake(t, newRustServer, newGoServer, rp.GenerateRound2KeyPair, rp.GenerateKeyPair, numHandshakes)
+			testHandshake(t, newRustServer, newGoServer, generateRound2KeyPair, generateKeyPair, numHandshakes)
 		})
 
 		t.Run("Go-to-Rust", func(t *testing.T) {
-			testHandshake(t, newGoServer, newRustServer, rp.GenerateKeyPair, rp.GenerateRound2KeyPair, numHandshakes)
+			testHandshake(t, newGoServer, newRustServer, generateKeyPair, generateRound2KeyPair, numHandshakes)
 		})
 	}
 
 	t.Run("Rust-to-Rust", func(t *testing.T) {
 		// We only perform a single handshake as the tests should not wait for the hardcoded rekey timeout
-		testHandshake(t, newStandaloneRustServer, newStandaloneRustServer, rp.GenerateRound2KeyPair, rp.GenerateRound2KeyPair, 1)
+		testHandshake(t, newStandaloneRustServer, newStandaloneRustServer, generateRound2KeyPair, generateRound2KeyPair, 1)
 	})
 
 	t.Run("In-process", func(t *testing.T) {
@@ -83,7 +120,7 @@ func newStandaloneRustServer(t *testing.T, name string, cfg rp.Config) (test.Ser
 	return test.NewStandaloneServer(cfg, "rosenpass", dir)
 }
 
-func testHandshake(t *testing.T, newServerAlice, newServerBob func(*testing.T, string, rp.Config) (test.Server, error), newKeyPairAlice, newKeyPairBob func() (rp.PublicKey, rp.SecretKey, error), numHandshakes int) {
+func testHandshake(t *testing.T, newServerAlice, newServerBob func(*testing.T, string, rp.Config) (test.Server, error), newKeyPairAlice, newKeyPairBob func() ([]byte, []byte, error), numHandshakes int) {
 	require := require.New(t)
 
 	// Generate keys
