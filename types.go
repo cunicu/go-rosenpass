@@ -7,6 +7,8 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 
+	"github.com/cloudflare/circl/kem/kyber/kyber512"
+	"github.com/cloudflare/circl/kem/mceliece/mceliece460896"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/chacha20poly1305"
 )
@@ -37,7 +39,7 @@ func (t msgType) String() string {
 	}
 }
 
-func msgTypeFromPayload(pl payload) msgType {
+func msgTypeFromPayload(pl Payload) msgType {
 	switch pl.(type) {
 	case *initHello:
 		return msgTypeInitHello
@@ -69,20 +71,20 @@ const (
 	ckSize  = hashSize // Chaining key size
 
 	// Classic McEliece 460896 sizes.
-	sctSize       = 188    // Static Cipher-text size
-	spkSize       = 524160 // Static public key size
-	sskSizeRound2 = 13568  // Static secret key size (Round 2 implementation)
-	sskSize       = 13608  // Static secret key size
+	sctSize = mceliece460896.CiphertextSize // Static Cipher-text size
+	spkSize = mceliece460896.PublicKeySize  // Static public key size
+	sskSize = mceliece460896.PrivateKeySize // Static secret key size
 
 	// Kyber-512 sizes.
-	ectSize = 768  // Ephemeral cipher text size
-	epkSize = 800  // Ephemeral public key size
-	eskSize = 1632 // Ephemeral secret key size
+	ectSize = kyber512.CiphertextSize // Ephemeral cipher text size
+	epkSize = kyber512.PublicKeySize  // Ephemeral public key size
+	eskSize = kyber512.PrivateKeySize // Ephemeral secret key size
 
 	// Envelope sizes.
-	macSize      = 16
-	cookieSize   = 16
-	envelopeSize = 4 + macSize + cookieSize
+	macSize         = 16
+	cookieSize      = 16
+	envelopeSize    = 4 + macSize + cookieSize
+	maxEnvelopeSize = envelopeSize + maxMsgSize
 
 	// Biscuit sizes.
 	biscuitNoSize     = 12
@@ -93,6 +95,7 @@ const (
 	respHelloMsgSize = 2*sidSize + ectSize + sctSize + biscuitSize + nonceSizeX + 2*authSize
 	initConfMsgSize  = 2*sidSize + biscuitSize + nonceSizeX + 2*authSize
 	emptyDataMsgSize = sidSize + 8 + authSize
+	maxMsgSize       = max(initHelloMsgSize, respHelloMsgSize, initConfMsgSize, emptyDataMsgSize)
 )
 
 type (
@@ -108,22 +111,25 @@ type (
 	sid           [sidSize]byte // Session ID
 	pid           [pidSize]byte // Peer ID
 	sealedBiscuit [sealedBiscuitSize]byte
-
-	sct []byte // Static Cipher-text
-	spk []byte // Static public key
-	ssk []byte // Static secret key
-	ect []byte // Ephemeral cipher text size
-	epk []byte // Ephemeral public key size
-	esk []byte // Ephemeral secret key size
+	sct           [sctSize]byte // Static Cipher-text
+	spk           [spkSize]byte // Static public key
+	ssk           [sskSize]byte // Static secret key
+	ect           [ectSize]byte // Ephemeral cipher text size
+	epk           [epkSize]byte // Ephemeral public key size
+	esk           [eskSize]byte // Ephemeral secret key size
 
 	// Some aliases for the public API.
-	PeerID = pid
-
+	PeerID       = pid
+	Key          = key
 	PresharedKey = key
 	PublicKey    = spk
 	SecretKey    = ssk
-	Key          = key
 )
+
+func (s spk) IsSet() bool {
+	empty := spk{}
+	return s != empty
+}
 
 func ParsePeerID(s string) (pid, error) { //nolint:revive
 	p, err := base64.StdEncoding.DecodeString(s)

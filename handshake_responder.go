@@ -57,7 +57,7 @@ func (hs *responderHandshake) handleInitHello(h *initHello) error {
 }
 
 // Step 3.
-func (hs *responderHandshake) sendRespHello(from endpoint) error {
+func (hs *responderHandshake) sendRespHello(from Endpoint) error {
 	var err error
 
 	// RHR1: Responder generates a session ID.
@@ -149,7 +149,7 @@ func (hs *responderHandshake) handleInitConf(i *initConf) error {
 }
 
 // Step 7.
-func (hs *responderHandshake) sendEmptyData(from endpoint) error {
+func (hs *responderHandshake) sendEmptyData(from Endpoint) error {
 	hs.txnm++
 
 	n := make([]byte, nonceSize)
@@ -189,7 +189,7 @@ func (hs *responderHandshake) storeBiscuit() (sealedBiscuit, error) {
 		ck:        hs.ck,
 	}
 
-	pt := b.MarshalBinary()
+	pt := b.MarshalBinary(nil)
 
 	xaead, err := newXAEAD(biscuitKey)
 	if err != nil {

@@ -25,30 +25,6 @@ func GenerateKeyPair() (PublicKey, SecretKey, error) { //nolint:revive
 	return generateStaticKeyPair()
 }
 
-// GenerateKeyPair generates a new Classic McEliece key pair in its old (round 2) format.
-func GenerateRound2KeyPair() (PublicKey, SecretKey, error) { //nolint:revive
-	spk, ssk, err := generateStaticKeyPair()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Convert a secret key from its round 3 to round 2 format
-	if len(ssk) == sskSize {
-		g := ssk[40:232]
-		a := ssk[232:13032]
-		s := ssk[13032:13608]
-
-		sskNew := []byte{}
-		sskNew = append(sskNew, s...)
-		sskNew = append(sskNew, g...)
-		sskNew = append(sskNew, a...)
-
-		return spk, sskNew, nil
-	}
-
-	return spk, ssk, nil
-}
-
 // Generates a new pre-shared key.
 func GeneratePresharedKey() (Key, error) { //nolint:revive
 	k, err := generateKey(pskSize)
@@ -142,7 +118,7 @@ func generateKey(l int) ([]byte, error) {
 func generateStaticKeyPair() (spk, ssk, error) {
 	pk, sk, err := generateKeyPair(kemStatic)
 	if err != nil {
-		return nil, nil, err
+		return spk{}, ssk{}, err
 	}
 
 	return spk(pk), ssk(sk), nil
@@ -151,22 +127,27 @@ func generateStaticKeyPair() (spk, ssk, error) {
 func generateEphemeralKeyPair() (epk, esk, error) {
 	pk, sk, err := generateKeyPair(kemEphemeral)
 	if err != nil {
-		return nil, nil, err
+		return epk{}, esk{}, err
 	}
 
 	return epk(pk), esk(sk), nil
 }
 
-func generateKeyPair(typ kem.Scheme) ([]byte, []byte, error) {
+func generateKeyPair(typ kem.Scheme) (pkm []byte, skm []byte, err error) {
 	pk, sk, err := typ.GenerateKeyPair()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	pk2, _ := pk.MarshalBinary()
-	sk2, _ := sk.MarshalBinary()
+	if pkm, err = pk.MarshalBinary(); err != nil {
+		return nil, nil, err
+	}
 
-	return pk2, sk2, nil
+	if skm, err = sk.MarshalBinary(); err != nil {
+		return nil, nil, err
+	}
+
+	return pkm, skm, nil
 }
 
 func newKEM(typ kem.Scheme, key []byte) (*keyEncapsulation, error) {

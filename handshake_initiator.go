@@ -183,7 +183,7 @@ func (hs *initiatorHandshake) retransmitDelay() time.Duration {
 	return time.Duration(after*1e6) * time.Microsecond
 }
 
-func (hs *initiatorHandshake) scheduleRetransmission(pl payload) {
+func (hs *initiatorHandshake) scheduleRetransmission(pl Payload) {
 	hs.txTimer = time.AfterFunc(hs.retransmitDelay(), func() {
 		hs.txRetryCount++
 
@@ -198,7 +198,7 @@ func (hs *initiatorHandshake) scheduleRetransmission(pl payload) {
 	})
 }
 
-func (hs *initiatorHandshake) send(pl payload) error {
+func (hs *initiatorHandshake) send(pl Payload) error {
 	hs.txRetryCount = 0
 	hs.scheduleRetransmission(pl)
 

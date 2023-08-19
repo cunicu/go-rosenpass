@@ -26,7 +26,7 @@ func TestUDPConn(t *testing.T) {
 		},
 	}
 
-	c, err := newUDPConn([]*net.UDPAddr{
+	c, err := NewUDPConn([]*net.UDPAddr{
 		{
 			Port: 1234,
 		},
@@ -39,10 +39,11 @@ func TestUDPConn(t *testing.T) {
 	recvFncs, err := c.Open()
 	require.NoError(err)
 
-	pls := make(chan payload)
+	pls := make(chan Payload)
 	for _, recvFnc := range recvFncs {
-		go func(recvFnc receiveFunc) {
-			pl, _, err := recvFnc(spk)
+		go func(recvFnc ReceiveFunc) {
+			buf := make([]byte, maxEnvelopeSize)
+			pl, _, err := recvFnc(spk, buf)
 			require.NoError(err)
 
 			pls <- pl
