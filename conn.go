@@ -8,7 +8,7 @@ type Endpoint interface {
 	Equal(Endpoint) bool
 }
 
-type ReceiveFunc func(spkm spk) (Payload, Endpoint, error)
+type ReceiveFunc func(spkm spk, buf []byte) (Payload, Endpoint, error)
 
 type Conn interface {
 	Close() error

@@ -59,7 +59,7 @@ func (e *Envelope) MarshalBinary(buf []byte) []byte {
 	mTyp := msgTypeFromPayload(e.payload)
 
 	buf = append(buf, uint8(mTyp), 0, 0, 0)
-	buf = e.payload.MarshalBinary(buf[4:])
+	buf = e.payload.MarshalBinary(buf)
 
 	return concat(buf,
 		e.mac[:],
@@ -72,10 +72,7 @@ func (e *Envelope) UnmarshalBinary(buf []byte) (o int, err error) {
 		return -1, errMsgTruncated
 	}
 
-	mType := msgType(buf[0])
-	o += 4
-
-	switch mType {
+	switch msgType(buf[0]) {
 	case msgTypeInitHello:
 		e.payload = &initHello{}
 	case msgTypeRespHello:
@@ -87,6 +84,8 @@ func (e *Envelope) UnmarshalBinary(buf []byte) (o int, err error) {
 	default:
 		return -1, errInvalidMsgType
 	}
+
+	o += 4
 
 	p, err := e.payload.UnmarshalBinary(buf[o : o+lenPayload])
 	if err != nil {

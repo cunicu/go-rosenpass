@@ -144,10 +144,7 @@ func networkFromAddr(a *net.UDPAddr) string {
 }
 
 func receiveFromConn(conn *net.UDPConn) ReceiveFunc {
-	return func(spkm spk) (Payload, Endpoint, error) {
-		// TODO: Check for appropriate MTU
-		buf := make([]byte, 1500)
-
+	return func(spkm spk, buf []byte) (Payload, Endpoint, error) {
 		n, from, err := conn.ReadFromUDP(buf)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to read: %w", err)

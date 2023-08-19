@@ -139,8 +139,10 @@ func (s *Server) Run() error {
 }
 
 func (s *Server) receiveLoop(recvFnc ReceiveFunc) {
+	buf := make([]byte, maxEnvelopeSize)
+
 	for {
-		pl, from, err := recvFnc(s.spkm)
+		pl, from, err := recvFnc(s.spkm, buf)
 		if err != nil {
 			if errors.Is(err, net.ErrClosed) {
 				return

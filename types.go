@@ -81,9 +81,10 @@ const (
 	eskSize = kyber512.PrivateKeySize // Ephemeral secret key size
 
 	// Envelope sizes.
-	macSize      = 16
-	cookieSize   = 16
-	envelopeSize = 4 + macSize + cookieSize
+	macSize         = 16
+	cookieSize      = 16
+	envelopeSize    = 4 + macSize + cookieSize
+	maxEnvelopeSize = envelopeSize + maxMsgSize
 
 	// Biscuit sizes.
 	biscuitNoSize     = 12
@@ -94,6 +95,7 @@ const (
 	respHelloMsgSize = 2*sidSize + ectSize + sctSize + biscuitSize + nonceSizeX + 2*authSize
 	initConfMsgSize  = 2*sidSize + biscuitSize + nonceSizeX + 2*authSize
 	emptyDataMsgSize = sidSize + 8 + authSize
+	maxMsgSize       = max(initHelloMsgSize, respHelloMsgSize, initConfMsgSize, emptyDataMsgSize)
 )
 
 type (
