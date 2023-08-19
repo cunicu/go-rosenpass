@@ -1,9 +1,9 @@
 # go-rosenpass
 
 <!-- [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/cunicu/go-rosenpass/test.yaml?style=flat-square)](https://github.com/cunicu/go-rosenpass/actions) -->
-[![Codecov branch](https://img.shields.io/codecov/c/github/cunicu/go-rosenpass/master?style=flat-square&token=xUGG2iEsuQ)](https://app.codecov.io/gh/cunicu/go-rosenpass/tree/master)
+[![Codecov branch](https://img.shields.io/codecov/c/github/cunicu/go-rosenpass/main?style=flat-square&token=xUGG2iEsuQ)](https://app.codecov.io/gh/cunicu/go-rosenpass/tree/main)
 [![goreportcard](https://goreportcard.com/badge/github.com/cunicu/go-rosenpass?style=flat-square)](https://goreportcard.com/report/github.com/cunicu/go-rosenpass)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](https://github.com/cunicu/go-rosenpass/blob/master/LICENSES/Apache-2.0.txt)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](https://github.com/cunicu/go-rosenpass/blob/main/LICENSES/Apache-2.0.txt)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/cunicu/go-rosenpass?style=flat-square)
 [![Go Reference](https://pkg.go.dev/badge/github.com/cunicu/go-rosenpass.svg)](https://pkg.go.dev/github.com/cunicu/go-rosenpass)
 
