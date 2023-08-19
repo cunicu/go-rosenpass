@@ -65,19 +65,27 @@ func (s *UDPConn) Send(pl Payload, spkt spk, ep Endpoint) error {
 		return errInvalidEndpoint
 	}
 
-	e := Envelope{
-		payload: pl,
-	}
+	var msgType msgType
+	var msgSize int
 
 	switch pl.(type) {
 	case *initHello:
-		e.typ = msgTypeInitHello
+		msgType = msgTypeInitHello
+		msgSize = initHelloMsgSize
 	case *respHello:
-		e.typ = msgTypeRespHello
+		msgType = msgTypeRespHello
+		msgSize = respHelloMsgSize
 	case *initConf:
-		e.typ = msgTypeInitConf
+		msgType = msgTypeInitConf
+		msgSize = initConfMsgSize
 	case *emptyData:
-		e.typ = msgTypeEmptyData
+		msgType = msgTypeEmptyData
+		msgSize = emptyDataMsgSize
+	}
+
+	env := Envelope{
+		typ:     msgType,
+		payload: pl,
 	}
 
 	network := networkFromAddr(uep.UDPAddr)
@@ -92,7 +100,10 @@ func (s *UDPConn) Send(pl Payload, spkt spk, ep Endpoint) error {
 		}
 	}
 
-	buf := e.MarshalBinaryAndSeal(spkt)
+	// Pre-allocate full buffer for efficiency
+	buf := make([]byte, 0, envelopeSize+msgSize)
+	buf = env.MarshalBinaryAndSeal(spkt, buf)
+
 	if n, err := conn.WriteToUDP(buf, uep.UDPAddr); err != nil {
 		return err
 	} else if n != len(buf) {

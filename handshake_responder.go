@@ -189,7 +189,7 @@ func (hs *responderHandshake) storeBiscuit() (sealedBiscuit, error) {
 		ck:        hs.ck,
 	}
 
-	pt := b.MarshalBinary()
+	pt := b.MarshalBinary(nil)
 
 	xaead, err := newXAEAD(biscuitKey)
 	if err != nil {

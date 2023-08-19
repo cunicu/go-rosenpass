@@ -32,7 +32,7 @@ func TestMessages(t *testing.T) {
 			auth:  authTag(rand(authSize)),
 		}
 
-		buf := m1.MarshalBinary()
+		buf := m1.MarshalBinary(nil)
 		require.Len(buf, initHelloMsgSize)
 
 		sz, err := m2.UnmarshalBinary(buf)
@@ -56,7 +56,7 @@ func TestMessages(t *testing.T) {
 			biscuit: sealedBiscuit(rand(sealedBiscuitSize)),
 		}
 
-		buf := m1.MarshalBinary()
+		buf := m1.MarshalBinary(nil)
 		require.Len(buf, respHelloMsgSize)
 
 		sz, err := m2.UnmarshalBinary(buf)
@@ -81,7 +81,7 @@ func TestMessages(t *testing.T) {
 		m1.sidi, err = generateSessionID()
 		require.NoError(err)
 
-		buf := m1.MarshalBinary()
+		buf := m1.MarshalBinary(nil)
 		require.Len(buf, initConfMsgSize)
 
 		sz, err := m2.UnmarshalBinary(buf)
@@ -105,7 +105,7 @@ func TestMessages(t *testing.T) {
 		m1.sid, err = generateSessionID()
 		require.NoError(err)
 
-		buf := m1.MarshalBinary()
+		buf := m1.MarshalBinary(nil)
 		require.Len(buf, emptyDataMsgSize)
 
 		sz, err := m2.UnmarshalBinary(buf)

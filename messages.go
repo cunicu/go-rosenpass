@@ -16,8 +16,8 @@ var (
 )
 
 type Payload interface {
-	MarshalBinary() []byte
-	UnmarshalBinary(data []byte) (int, error)
+	MarshalBinary(buf []byte) []byte
+	UnmarshalBinary(buf []byte) (int, error)
 }
 
 type Envelope struct {
@@ -27,8 +27,8 @@ type Envelope struct {
 	cookie  cookie  // Currently unused, TODO: do something with this
 }
 
-func (e *Envelope) MarshalBinaryAndSeal(spkt spk) []byte {
-	buf := e.MarshalBinary()
+func (e *Envelope) MarshalBinaryAndSeal(spkt spk, buf []byte) []byte {
+	buf = e.MarshalBinary(buf)
 
 	macOffset := len(buf) - macSize - cookieSize
 	macKey := khMAC.hash(spkt[:], buf[:macOffset])
@@ -55,15 +55,13 @@ func (e *Envelope) CheckAndUnmarshalBinary(buf []byte, spkm spk) (int, error) {
 	return e.UnmarshalBinary(buf)
 }
 
-func (e *Envelope) MarshalBinary() []byte {
+func (e *Envelope) MarshalBinary(buf []byte) []byte {
 	mTyp := msgTypeFromPayload(e.payload)
 
-	header := []byte{uint8(mTyp), 0, 0, 0}
-	payload := e.payload.MarshalBinary()
+	buf = append(buf, uint8(mTyp), 0, 0, 0)
+	buf = e.payload.MarshalBinary(buf[4:])
 
-	return concat(envelopeSize+len(payload),
-		header,
-		payload,
+	return concat(buf,
 		e.mac[:],
 		e.cookie[:])
 }
@@ -108,8 +106,8 @@ type biscuit struct {
 	ck        key       // Chaining key
 }
 
-func (b *biscuit) MarshalBinary() []byte {
-	return concat(biscuitSize,
+func (b *biscuit) MarshalBinary(buf []byte) []byte {
+	return concat(buf,
 		b.pidi[:],
 		b.biscuitNo[:],
 		b.ck[:])
@@ -135,8 +133,8 @@ type initHello struct {
 	auth  authTag                  // Encrypted TAI64N Time Stamp (against replay attacks)
 }
 
-func (m *initHello) MarshalBinary() []byte {
-	return concat(initHelloMsgSize,
+func (m *initHello) MarshalBinary(buf []byte) []byte {
+	return concat(buf,
 		m.sidi[:],
 		m.epki[:],
 		m.sctr[:],
@@ -171,8 +169,8 @@ type respHello struct {
 	auth    authTag       // Empty encrypted message (just an auth tag)
 }
 
-func (m *respHello) MarshalBinary() []byte {
-	return concat(respHelloMsgSize,
+func (m *respHello) MarshalBinary(buf []byte) []byte {
+	return concat(buf,
 		m.sidr[:],
 		m.sidi[:],
 		m.ecti[:],
@@ -207,8 +205,8 @@ type initConf struct {
 	auth    authTag       // Empty encrypted message (just an auth tag)
 }
 
-func (m *initConf) MarshalBinary() []byte {
-	return concat(initConfMsgSize,
+func (m *initConf) MarshalBinary(buf []byte) []byte {
+	return concat(buf,
 		m.sidi[:],
 		m.sidr[:],
 		m.biscuit[:],
@@ -234,8 +232,8 @@ type emptyData struct {
 	auth authTag // Empty encrypted message (just an auth tag)
 }
 
-func (m *emptyData) MarshalBinary() []byte {
-	return concat(emptyDataMsgSize,
+func (m *emptyData) MarshalBinary(buf []byte) []byte {
+	return concat(buf,
 		m.sid[:],
 		m.ctr[:],
 		m.auth[:])
@@ -253,16 +251,9 @@ func (m *emptyData) UnmarshalBinary(buf []byte) (o int, err error) {
 	return o, nil
 }
 
-func concat(length int, parts ...[]byte) []byte {
-	buf := make([]byte, 0, length)
-
+func concat(buf []byte, parts ...[]byte) []byte {
 	for _, part := range parts {
 		buf = append(buf, part...)
-	}
-
-	if len(buf) != length {
-		// TODO: Improve error handling here
-		panic("failed to construct msg") //nolint:forbidigo
 	}
 
 	return buf
