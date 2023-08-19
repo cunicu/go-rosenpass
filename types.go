@@ -7,6 +7,8 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 
+	"github.com/cloudflare/circl/kem/kyber/kyber512"
+	"github.com/cloudflare/circl/kem/mceliece/mceliece460896"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/chacha20poly1305"
 )
@@ -69,15 +71,15 @@ const (
 	ckSize  = hashSize // Chaining key size
 
 	// Classic McEliece 460896 sizes.
-	sctSize       = 188    // Static Cipher-text size
-	spkSize       = 524160 // Static public key size
-	sskSizeRound2 = 13568  // Static secret key size (Round 2 implementation)
-	sskSize       = 13608  // Static secret key size
+	sctSize       = mceliece460896.CiphertextSize // Static Cipher-text size
+	spkSize       = mceliece460896.PublicKeySize  // Static public key size
+	sskSize       = mceliece460896.PrivateKeySize // Static secret key size
+	sskSizeRound2 = 13568                         // Static secret key size (Round 2 implementation)
 
 	// Kyber-512 sizes.
-	ectSize = 768  // Ephemeral cipher text size
-	epkSize = 800  // Ephemeral public key size
-	eskSize = 1632 // Ephemeral secret key size
+	ectSize = kyber512.CiphertextSize // Ephemeral cipher text size
+	epkSize = kyber512.PublicKeySize  // Ephemeral public key size
+	eskSize = kyber512.PrivateKeySize // Ephemeral secret key size
 
 	// Envelope sizes.
 	macSize      = 16
