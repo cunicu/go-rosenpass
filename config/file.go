@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	rp "cunicu.li/go-rosenpass"
+	"cunicu.li/go-rosenpass/handlers"
 
 	"github.com/pelletier/go-toml/v2"
 )
@@ -94,9 +95,9 @@ func (f *File) ToConfig() (c rp.Config, err error) {
 		return c, fmt.Errorf("failed to read public key: %w", err)
 	}
 
-	ch := newExchangeCommandHandler()
-	kh := newkeyoutHandler()
-	wh, err := newWireGuardHandler()
+	ch := handlers.NewExchangeCommandHandler()
+	kh := handlers.NewkeyoutHandler()
+	wh, err := handlers.NewWireGuardHandler()
 	if err != nil {
 		return c, fmt.Errorf("failed to configure WireGuard interfaces: %w", err)
 	}
@@ -115,17 +116,17 @@ func (f *File) ToConfig() (c rp.Config, err error) {
 
 		// Register peer to handlers
 		if p.KeyOut != nil {
-			if err := kh.addPeerKeyoutFile(pid, *p.KeyOut); err != nil {
+			if err := kh.AddPeerKeyoutFile(pid, *p.KeyOut); err != nil {
 				return c, fmt.Errorf("failed to add keyout file: %w", err)
 			}
 		}
 
 		if p.ExchangeCommand != nil {
-			ch.addPeerCommand(pid, p.ExchangeCommand)
+			ch.AddPeerCommand(pid, p.ExchangeCommand)
 		}
 
 		if p.WireGuard != nil {
-			wh.addPeer(pid, *p.WireGuard)
+			wh.AddPeer(pid, p.WireGuard.Interface, p.WireGuard.PublicKey)
 		}
 	}
 

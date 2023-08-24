@@ -3,7 +3,7 @@
 
 //go:build cgo || !(freebsd || openbsd)
 
-package config
+package handlers
 
 import (
 	"fmt"
@@ -15,14 +15,19 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
-type wireGuardHandler struct {
-	client *wgctrl.Client
-	peers  map[rp.PeerID]WireGuardSection
+type wireGuardPeer struct {
+	Interface string
+	PublicKey rp.Key
 }
 
-func newWireGuardHandler() (hdlr *wireGuardHandler, err error) {
-	hdlr = &wireGuardHandler{
-		peers: map[rp.PeerID]WireGuardSection{},
+type WireGuardHandler struct {
+	client *wgctrl.Client
+	peers  map[rp.PeerID]wireGuardPeer
+}
+
+func NewWireGuardHandler() (hdlr *WireGuardHandler, err error) {
+	hdlr = &WireGuardHandler{
+		peers: map[rp.PeerID]wireGuardPeer{},
 	}
 
 	if hdlr.client, err = wgctrl.New(); err != nil {
@@ -32,20 +37,23 @@ func newWireGuardHandler() (hdlr *wireGuardHandler, err error) {
 	return hdlr, nil
 }
 
-func (h *wireGuardHandler) addPeer(pid rp.PeerID, wg WireGuardSection) {
-	h.peers[pid] = wg
+func (h *WireGuardHandler) AddPeer(pid rp.PeerID, intf string, pk rp.Key) {
+	h.peers[pid] = wireGuardPeer{
+		Interface: intf,
+		PublicKey: pk,
+	}
 }
 
-func (h *wireGuardHandler) HandshakeCompleted(pid rp.PeerID, key rp.Key) {
+func (h *WireGuardHandler) HandshakeCompleted(pid rp.PeerID, key rp.Key) {
 	h.outputKey(rp.KeyOutputReasonStale, pid, key)
 }
 
-func (h *wireGuardHandler) HandshakeExpired(pid rp.PeerID) {
+func (h *WireGuardHandler) HandshakeExpired(pid rp.PeerID) {
 	key, _ := rp.GeneratePresharedKey()
 	h.outputKey(rp.KeyOutputReasonStale, pid, key)
 }
 
-func (h *wireGuardHandler) outputKey(_ rp.KeyOutputReason, pid rp.PeerID, psk rp.Key) {
+func (h *WireGuardHandler) outputKey(_ rp.KeyOutputReason, pid rp.PeerID, psk rp.Key) {
 	wg, ok := h.peers[pid]
 	if !ok {
 		return
