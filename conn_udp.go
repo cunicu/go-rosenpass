@@ -112,6 +112,20 @@ func (s *UDPConn) Send(pl payload, spkt spk, ep Endpoint) error {
 	return nil
 }
 
+func (s *UDPConn) LocalEndpoints() (eps []Endpoint, err error) {
+	for _, sc := range s.conns {
+		la := sc.LocalAddr()
+		lua, ok := la.(*net.UDPAddr)
+		if !ok {
+			return nil, fmt.Errorf("invalid address type encountered")
+		}
+
+		eps = append(eps, (*UDPEndpoint)(lua))
+	}
+
+	return eps, nil
+}
+
 func (s *UDPConn) open(networks map[string]*net.UDPAddr) ([]ReceiveFunc, error) {
 	recvFncs := []ReceiveFunc{}
 

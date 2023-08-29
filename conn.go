@@ -14,4 +14,7 @@ type Conn interface {
 	Close() error
 	Open() ([]ReceiveFunc, error)
 	Send(pl payload, spkm spk, cep Endpoint) error
+
+	// A list of local endpoints at which the Conn can receive handshake messages
+	LocalEndpoints() ([]Endpoint, error)
 }
