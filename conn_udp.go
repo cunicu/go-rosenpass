@@ -12,12 +12,12 @@ import (
 
 var errInvalidEndpoint = errors.New("invalid endpoint type")
 
-type udpEndpoint struct {
+type UDPEndpoint struct {
 	*net.UDPAddr
 }
 
-func (ep *udpEndpoint) Equal(o Endpoint) bool {
-	ep2, ok := o.(*udpEndpoint)
+func (ep *UDPEndpoint) Equal(o Endpoint) bool {
+	ep2, ok := o.(*UDPEndpoint)
 	if !ok {
 		return false
 	}
@@ -33,22 +33,22 @@ func (ep *udpEndpoint) Equal(o Endpoint) bool {
 	return true
 }
 
-type udpConn struct {
+type UDPConn struct {
 	listenAddrs []*net.UDPAddr
 	conns       map[string]*net.UDPConn
 
 	logger *slog.Logger
 }
 
-func newUDPConn(la []*net.UDPAddr) (*udpConn, error) {
-	return &udpConn{
+func NewUDPConn(la []*net.UDPAddr) (*UDPConn, error) {
+	return &UDPConn{
 		listenAddrs: la,
 		conns:       map[string]*net.UDPConn{},
 		logger:      slog.Default(),
 	}, nil
 }
 
-func (s *udpConn) Close() error {
+func (s *UDPConn) Close() error {
 	for _, conn := range s.conns {
 		if err := conn.Close(); err != nil {
 			return err
@@ -57,8 +57,8 @@ func (s *udpConn) Close() error {
 	return nil
 }
 
-func (s *udpConn) Send(pl payload, spkt spk, ep Endpoint) error {
-	uep, ok := ep.(*udpEndpoint)
+func (s *UDPConn) Send(pl payload, spkt spk, ep Endpoint) error {
+	uep, ok := ep.(*UDPEndpoint)
 	if !ok {
 		return errInvalidEndpoint
 	}
@@ -100,7 +100,7 @@ func (s *udpConn) Send(pl payload, spkt spk, ep Endpoint) error {
 	return nil
 }
 
-func (s *udpConn) open(networks map[string]*net.UDPAddr) ([]ReceiveFunc, error) {
+func (s *UDPConn) open(networks map[string]*net.UDPAddr) ([]ReceiveFunc, error) {
 	recvFncs := []ReceiveFunc{}
 
 	for network, listenAddr := range networks {
@@ -147,6 +147,6 @@ func receiveFromConn(conn *net.UDPConn) ReceiveFunc {
 			return nil, nil, fmt.Errorf("parsed partial packet")
 		}
 
-		return e.payload, &udpEndpoint{from}, nil
+		return e.payload, &UDPEndpoint{from}, nil
 	}
 }
