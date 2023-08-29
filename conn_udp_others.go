@@ -10,7 +10,7 @@ import (
 	"net"
 )
 
-func (s *udpConn) Open() ([]receiveFunc, error) {
+func (s *udpConn) Open() ([]ReceiveFunc, error) {
 	networks := map[string]*net.UDPAddr{}
 
 	for _, la := range s.listenAddrs {

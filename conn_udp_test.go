@@ -41,7 +41,7 @@ func TestUDPConn(t *testing.T) {
 
 	pls := make(chan payload)
 	for _, recvFnc := range recvFncs {
-		go func(recvFnc receiveFunc) {
+		go func(recvFnc ReceiveFunc) {
 			pl, _, err := recvFnc(spk)
 			require.NoError(err)
 

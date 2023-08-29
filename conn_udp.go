@@ -16,7 +16,7 @@ type udpEndpoint struct {
 	*net.UDPAddr
 }
 
-func (ep *udpEndpoint) Equal(o endpoint) bool {
+func (ep *udpEndpoint) Equal(o Endpoint) bool {
 	ep2, ok := o.(*udpEndpoint)
 	if !ok {
 		return false
@@ -57,7 +57,7 @@ func (s *udpConn) Close() error {
 	return nil
 }
 
-func (s *udpConn) Send(pl payload, spkt spk, ep endpoint) error {
+func (s *udpConn) Send(pl payload, spkt spk, ep Endpoint) error {
 	uep, ok := ep.(*udpEndpoint)
 	if !ok {
 		return errInvalidEndpoint
@@ -100,8 +100,8 @@ func (s *udpConn) Send(pl payload, spkt spk, ep endpoint) error {
 	return nil
 }
 
-func (s *udpConn) open(networks map[string]*net.UDPAddr) ([]receiveFunc, error) {
-	recvFncs := []receiveFunc{}
+func (s *udpConn) open(networks map[string]*net.UDPAddr) ([]ReceiveFunc, error) {
+	recvFncs := []ReceiveFunc{}
 
 	for network, listenAddr := range networks {
 		conn, err := net.ListenUDP(network, listenAddr)
@@ -130,8 +130,8 @@ func networkFromAddr(a *net.UDPAddr) string {
 	return "udp6"
 }
 
-func receiveFromConn(conn *net.UDPConn) receiveFunc {
-	return func(spkm spk) (payload, endpoint, error) {
+func receiveFromConn(conn *net.UDPConn) ReceiveFunc {
+	return func(spkm spk) (payload, Endpoint, error) {
 		// TODO: Check for appropriate MTU
 		buf := make([]byte, 1500)
 

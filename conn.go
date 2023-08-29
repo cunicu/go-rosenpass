@@ -3,15 +3,15 @@
 
 package rosenpass
 
-type endpoint interface {
+type Endpoint interface {
 	String() string
-	Equal(endpoint) bool
+	Equal(Endpoint) bool
 }
 
-type receiveFunc func(spkm spk) (payload, endpoint, error)
+type ReceiveFunc func(spkm spk) (payload, Endpoint, error)
 
-type conn interface {
+type Conn interface {
 	Close() error
-	Open() ([]receiveFunc, error)
-	Send(pl payload, spkm spk, cep endpoint) error
+	Open() ([]ReceiveFunc, error)
+	Send(pl payload, spkm spk, cep Endpoint) error
 }
