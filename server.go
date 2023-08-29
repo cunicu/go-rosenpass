@@ -135,7 +135,7 @@ func (s *Server) Run() error {
 	return nil
 }
 
-func (s *Server) AddPeer(pCfg PeerConfig) (PeerID, error) {
+func (s *Server) AddPeer(pCfg PeerConfig) (PeerID, error) { //nolint:revive
 	p, err := s.newPeer(pCfg)
 	if err != nil {
 		return PeerID{}, err
