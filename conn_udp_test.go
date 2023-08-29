@@ -16,14 +16,14 @@ func TestUDPConn(t *testing.T) {
 	spk, _, err := generateStaticKeyPair()
 	require.NoError(err)
 
+	ep := net.UDPAddr{
+		IP:   net.IPv6loopback,
+		Port: 1234,
+	}
+
 	p := &peer{
-		spkt: spk,
-		endpoint: &UDPEndpoint{
-			&net.UDPAddr{
-				IP:   net.IPv6loopback,
-				Port: 1234,
-			},
-		},
+		spkt:     spk,
+		endpoint: (*UDPEndpoint)(&ep),
 	}
 
 	c, err := NewUDPConn([]*net.UDPAddr{
