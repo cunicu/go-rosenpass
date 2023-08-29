@@ -26,7 +26,9 @@ type Server struct {
 	handshakes     map[sid]*initiatorHandshake // A lookup table mapping the session ID to the ongoing initiator handshake or live session
 	handshakesLock sync.RWMutex                // Protects handshakes
 
-	conn   Conn
+	conn      Conn
+	closeConn bool
+
 	logger *slog.Logger
 }
 
@@ -40,6 +42,9 @@ func NewUDPServer(cfg Config) (*Server, error) {
 	if cfg.Conn, err = NewUDPConn(cfg.ListenAddrs); err != nil {
 		return nil, err
 	}
+
+	// Server.Close() should also close the connection
+	cfg.closeConn = true
 
 	return NewServer(cfg)
 }
@@ -62,7 +67,9 @@ func NewServer(cfg Config) (*Server, error) {
 
 		peers:      map[pid]*peer{},
 		handshakes: map[sid]*initiatorHandshake{},
-		conn:       cfg.Conn,
+
+		conn:      cfg.Conn,
+		closeConn: cfg.closeConn,
 
 		logger: cfg.Logger,
 	}
@@ -105,8 +112,10 @@ func (s *Server) PID() PeerID { //nolint:revive
 func (s *Server) Close() error {
 	s.biscuitTicker.Stop()
 
-	if err := s.conn.Close(); err != nil {
-		return err
+	if s.closeConn {
+		if err := s.conn.Close(); err != nil {
+			return err
+		}
 	}
 
 	// s.handshakesLock.Lock()

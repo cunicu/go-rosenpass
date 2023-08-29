@@ -20,4 +20,6 @@ type Config struct {
 	Conn Conn
 
 	Logger *slog.Logger
+
+	closeConn bool
 }
