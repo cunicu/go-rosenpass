@@ -60,8 +60,8 @@ func NewUDPConn(la []*net.UDPAddr) (*UDPConn, error) {
 	}, nil
 }
 
-func (s *UDPConn) Close() error {
-	for _, conn := range s.conns {
+func (c *UDPConn) Close() error {
+	for _, conn := range c.conns {
 		if err := conn.Close(); err != nil {
 			return err
 		}
@@ -69,7 +69,7 @@ func (s *UDPConn) Close() error {
 	return nil
 }
 
-func (s *UDPConn) Send(pl payload, spkt spk, ep Endpoint) error {
+func (c *UDPConn) Send(pl payload, spkt spk, ep Endpoint) error {
 	uep, ok := ep.(*UDPEndpoint)
 	if !ok {
 		return errInvalidEndpoint
@@ -95,9 +95,9 @@ func (s *UDPConn) Send(pl payload, spkt spk, ep Endpoint) error {
 	// Check if we are on DragonFly or OpenBSD systems
 	// which require two independent sockets for listening
 	// on IPv4 and IPv6 simultaneously
-	conn, ok := s.conns[network]
+	conn, ok := c.conns[network]
 	if !ok {
-		if conn, ok = s.conns["udp"]; !ok { // Fallback
+		if conn, ok = c.conns["udp"]; !ok { // Fallback
 			return fmt.Errorf("failed to find socket with matching address family")
 		}
 	}
@@ -112,8 +112,8 @@ func (s *UDPConn) Send(pl payload, spkt spk, ep Endpoint) error {
 	return nil
 }
 
-func (s *UDPConn) LocalEndpoints() (eps []Endpoint, err error) {
-	for _, sc := range s.conns {
+func (c *UDPConn) LocalEndpoints() (eps []Endpoint, err error) {
+	for _, sc := range c.conns {
 		la := sc.LocalAddr()
 		lua, ok := la.(*net.UDPAddr)
 		if !ok {
@@ -126,7 +126,7 @@ func (s *UDPConn) LocalEndpoints() (eps []Endpoint, err error) {
 	return eps, nil
 }
 
-func (s *UDPConn) open(networks map[string]*net.UDPAddr) ([]ReceiveFunc, error) {
+func (c *UDPConn) open(networks map[string]*net.UDPAddr) ([]ReceiveFunc, error) {
 	recvFncs := []ReceiveFunc{}
 
 	for network, listenAddr := range networks {
@@ -135,9 +135,9 @@ func (s *UDPConn) open(networks map[string]*net.UDPAddr) ([]ReceiveFunc, error) 
 			return nil, fmt.Errorf("failed to listen: %w", err)
 		}
 
-		s.logger.Debug("Started listening", slog.Any("addr", listenAddr))
+		c.logger.Debug("Started listening", slog.Any("addr", listenAddr))
 
-		s.conns[network] = conn
+		c.conns[network] = conn
 		recvFncs = append(recvFncs, receiveFromConn(conn))
 	}
 
