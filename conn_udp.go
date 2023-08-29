@@ -12,11 +12,14 @@ import (
 
 var errInvalidEndpoint = errors.New("invalid endpoint type")
 
-type UDPEndpoint struct {
-	*net.UDPAddr
+type UDPEndpoint net.UDPAddr
+
+func (ep *UDPEndpoint) String() string {
+	addr := (*net.UDPAddr)(ep)
+	return addr.String()
 }
 
-func (ep *UDPEndpoint) Equal(o Endpoint) bool {
+func (ep UDPEndpoint) Equal(o Endpoint) bool {
 	ep2, ok := o.(*UDPEndpoint)
 	if !ok {
 		return false
@@ -78,7 +81,7 @@ func (s *UDPConn) Send(pl payload, spkt spk, ep Endpoint) error {
 		e.typ = msgTypeEmptyData
 	}
 
-	network := networkFromAddr(uep.UDPAddr)
+	network := networkFromAddr((*net.UDPAddr)(uep))
 
 	// Check if we are on DragonFly or OpenBSD systems
 	// which require two independent sockets for listening
@@ -91,7 +94,7 @@ func (s *UDPConn) Send(pl payload, spkt spk, ep Endpoint) error {
 	}
 
 	buf := e.MarshalBinaryAndSeal(spkt)
-	if n, err := conn.WriteToUDP(buf, uep.UDPAddr); err != nil {
+	if n, err := conn.WriteToUDP(buf, (*net.UDPAddr)(uep)); err != nil {
 		return err
 	} else if n != len(buf) {
 		return fmt.Errorf("partial write")
@@ -147,6 +150,6 @@ func receiveFromConn(conn *net.UDPConn) ReceiveFunc {
 			return nil, nil, fmt.Errorf("parsed partial packet")
 		}
 
-		return e.payload, &UDPEndpoint{from}, nil
+		return e.payload, (*UDPEndpoint)(from), nil
 	}
 }
