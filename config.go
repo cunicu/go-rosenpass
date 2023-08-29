@@ -17,7 +17,7 @@ type Config struct {
 	Peers    []PeerConfig
 	Handlers []Handler
 
-	Conn conn
+	Conn Conn
 
 	Logger *slog.Logger
 }

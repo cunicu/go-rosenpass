@@ -17,7 +17,7 @@ import (
 // routed to an IPv6 socket - two separate sockets are required if
 // both address families are to be supported.
 // See inet6(4) for details.
-func (s *udpConn) Open() ([]receiveFunc, error) {
+func (s *udpConn) Open() ([]ReceiveFunc, error) {
 	networks := map[string]*net.UDPAddr{}
 
 	for _, la := range s.listenAddrs {

@@ -26,7 +26,7 @@ type Server struct {
 	handshakes     map[sid]*initiatorHandshake // A lookup table mapping the session ID to the ongoing initiator handshake or live session
 	handshakesLock sync.RWMutex                // Protects handshakes
 
-	conn   conn
+	conn   Conn
 	logger *slog.Logger
 }
 
@@ -128,7 +128,7 @@ func (s *Server) Run() error {
 	return nil
 }
 
-func (s *Server) receiveLoop(recvFnc receiveFunc) {
+func (s *Server) receiveLoop(recvFnc ReceiveFunc) {
 	for {
 		pl, from, err := recvFnc(s.spkm)
 		if err != nil {
@@ -174,7 +174,7 @@ func (s *Server) rotateBiscuitKey() error {
 	return nil
 }
 
-func (s *Server) handle(pl payload, from endpoint) (err error) {
+func (s *Server) handle(pl payload, from Endpoint) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("recovered from panic: %v", r)
@@ -305,7 +305,7 @@ func (s *Server) initiateHandshake(p *peer) {
 	}
 }
 
-func (s *Server) completeHandshake(hs *handshake, ep endpoint, rekeyAfter time.Duration) {
+func (s *Server) completeHandshake(hs *handshake, ep Endpoint, rekeyAfter time.Duration) {
 	hs.peer.logger.Debug("Exchanged key with peer")
 
 	if hs.peer.endpoint == nil || !hs.peer.endpoint.Equal(ep) {
