@@ -26,6 +26,11 @@ type initiatorHandshake struct {
 	biscuit sealedBiscuit
 }
 
+func (hs *initiatorHandshake) Close() error {
+	hs.expiryTimer.Stop()
+	return nil
+}
+
 // Step 1.
 func (hs *initiatorHandshake) sendInitHello() error {
 	var err error

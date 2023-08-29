@@ -118,13 +118,11 @@ func (s *Server) Close() error {
 		}
 	}
 
-	// s.handshakesLock.Lock()
-
-	// for _, hs := range s.handshakes {
-	// 	if err := hs.Close(); err != nil {
-	// 		return err
-	// 	}
-	// }
+	for pid := range s.peers {
+		if err := s.RemovePeer(pid); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -133,6 +131,48 @@ func (s *Server) Run() error {
 	for _, p := range s.peers {
 		s.initiateHandshake(p)
 	}
+
+	return nil
+}
+
+func (s *Server) AddPeer(pCfg PeerConfig) (PeerID, error) {
+	p, err := s.newPeer(pCfg)
+	if err != nil {
+		return PeerID{}, err
+	}
+
+	pid := p.PID()
+	s.peers[pid] = p
+
+	s.initiateHandshake(p)
+
+	s.logger.Debug("Added peer", "pid", p.PID())
+
+	return pid, nil
+}
+
+func (s *Server) RemovePeer(pid pid) error {
+	peer, ok := s.peers[pid]
+	if !ok {
+		return errors.New("peer does not exist")
+	}
+
+	s.handshakesLock.Lock()
+	defer s.handshakesLock.Unlock()
+
+	for sid, hs := range s.handshakes {
+		if hs.peer != peer {
+			continue
+		}
+
+		if err := hs.Close(); err != nil {
+			return err
+		}
+
+		delete(s.handshakes, sid)
+	}
+
+	delete(s.peers, pid)
 
 	return nil
 }
