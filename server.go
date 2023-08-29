@@ -37,7 +37,7 @@ func NewUDPServer(cfg Config) (*Server, error) {
 	}
 
 	var err error
-	if cfg.Conn, err = newUDPConn(cfg.ListenAddrs); err != nil {
+	if cfg.Conn, err = NewUDPConn(cfg.ListenAddrs); err != nil {
 		return nil, err
 	}
 

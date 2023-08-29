@@ -51,13 +51,13 @@ func (s *Server) newPeer(cfg PeerConfig) (*peer, error) {
 	p := &peer{
 		server: s,
 
-		initialEndpoint: &udpEndpoint{cfg.Endpoint},
+		initialEndpoint: &UDPEndpoint{cfg.Endpoint},
 		spkt:            cfg.PublicKey,
 		psk:             cfg.PresharedKey,
 	}
 
 	if cfg.Endpoint != nil {
-		p.endpoint = &udpEndpoint{cfg.Endpoint}
+		p.endpoint = &UDPEndpoint{cfg.Endpoint}
 	}
 
 	p.logger = s.logger.With(slog.Any("pid", p.PID()))

@@ -18,7 +18,7 @@ func TestUDPConn(t *testing.T) {
 
 	p := &peer{
 		spkt: spk,
-		endpoint: &udpEndpoint{
+		endpoint: &UDPEndpoint{
 			&net.UDPAddr{
 				IP:   net.IPv6loopback,
 				Port: 1234,
@@ -26,7 +26,7 @@ func TestUDPConn(t *testing.T) {
 		},
 	}
 
-	c, err := newUDPConn([]*net.UDPAddr{
+	c, err := NewUDPConn([]*net.UDPAddr{
 		{
 			Port: 1234,
 		},
