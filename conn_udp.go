@@ -14,6 +14,15 @@ var errInvalidEndpoint = errors.New("invalid endpoint type")
 
 type UDPEndpoint net.UDPAddr
 
+func NewUDPEndpoint(s string) (*UDPEndpoint, error) {
+	addr, err := net.ResolveUDPAddr("udp", s)
+	if err != nil {
+		return nil, err
+	}
+
+	return (*UDPEndpoint)(addr), nil
+}
+
 func (ep *UDPEndpoint) String() string {
 	addr := (*net.UDPAddr)(ep)
 	return addr.String()
