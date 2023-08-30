@@ -116,13 +116,13 @@ func (f *File) ToConfig() (c rp.Config, err error) {
 
 		// Register peer to handlers
 		if p.KeyOut != nil {
-			if err := kh.AddPeerKeyoutFile(pid, *p.KeyOut); err != nil {
+			if err := kh.AddPeer(pid, *p.KeyOut); err != nil {
 				return c, fmt.Errorf("failed to add keyout file: %w", err)
 			}
 		}
 
 		if p.ExchangeCommand != nil {
-			ch.AddPeerCommand(pid, p.ExchangeCommand)
+			ch.AddPeer(pid, p.ExchangeCommand)
 		}
 
 		if p.WireGuard != nil {

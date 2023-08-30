@@ -18,7 +18,7 @@ func NewWireGuardHandler() (hdlr *WireGuardHandler, err error) {
 }
 
 func (h *WireGuardHandler) AddPeer(pid rp.PeerID, intf string, pk rp.Key) {
-	h.ExchangeCommandHandler.AddPeerCommand(pid, []string{
+	h.ExchangeCommandHandler.AddPeer(pid, []string{
 		"wg",
 		"set", intf,
 		"peer", pk.String(),

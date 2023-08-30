@@ -44,6 +44,10 @@ func (h *WireGuardHandler) AddPeer(pid rp.PeerID, intf string, pk rp.Key) {
 	}
 }
 
+func (h *WireGuardHandler) RemovePeer(pid rp.PeerID) {
+	delete(h.peers, pid)
+}
+
 func (h *WireGuardHandler) HandshakeCompleted(pid rp.PeerID, key rp.Key) {
 	h.outputKey(rp.KeyOutputReasonStale, pid, key)
 }

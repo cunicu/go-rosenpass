@@ -22,8 +22,12 @@ func NewExchangeCommandHandler() *ExchangeCommandHandler {
 	}
 }
 
-func (h *ExchangeCommandHandler) AddPeerCommand(pid rp.PeerID, cmd []string) {
+func (h *ExchangeCommandHandler) AddPeer(pid rp.PeerID, cmd []string) {
 	h.peers[pid] = cmd
+}
+
+func (h *ExchangeCommandHandler) RemovePeer(pid rp.PeerID) {
+	delete(h.peers, pid)
 }
 
 func (h *ExchangeCommandHandler) HandshakeCompleted(pid rp.PeerID, key rp.Key) {

@@ -23,7 +23,7 @@ func NewkeyoutHandler() *KeyoutFileHandler {
 	}
 }
 
-func (h *KeyoutFileHandler) AddPeerKeyoutFile(pid rp.PeerID, path string) error {
+func (h *KeyoutFileHandler) AddPeer(pid rp.PeerID, path string) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("failed to create dir: %w", err)
@@ -32,6 +32,10 @@ func (h *KeyoutFileHandler) AddPeerKeyoutFile(pid rp.PeerID, path string) error 
 	h.peers[pid] = path
 
 	return nil
+}
+
+func (h *KeyoutFileHandler) RemovePeer(pid rp.PeerID) {
+	delete(h.peers, pid)
 }
 
 func (h *KeyoutFileHandler) HandshakeCompleted(pid rp.PeerID, key rp.Key) {
