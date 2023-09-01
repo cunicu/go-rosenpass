@@ -31,14 +31,15 @@ linters-settings:
         - github.com/cloudflare/circl/kem/mceliece/mceliece460896
         - github.com/gopacket/gopacket
         - github.com/gopacket/gopacket/layers
+        - github.com/mdlayher/socket
         - github.com/pelletier/go-toml/v2
         - github.com/spf13/cobra
-        - github.com/mdlayher/socket
         - golang.org/x/crypto/blake2b
         - golang.org/x/crypto/chacha20poly1305
+        - golang.org/x/net/bpf
         - golang.org/x/sys/unix
         - golang.zx2c4.com/wireguard/wgctrl
-        - golang.org/x/net/bpf
+        - gopkg.in/ini.v1
         deny:
         - pkg: math/rand
           desc: Use cryptographic PRNG
