@@ -9,7 +9,8 @@ import (
 )
 
 type Config struct {
-	ListenAddrs []*net.UDPAddr
+	ListenSinglePort bool
+	ListenAddrs      []*net.UDPAddr
 
 	PublicKey spk
 	SecretKey ssk
