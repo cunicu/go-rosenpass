@@ -4,6 +4,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -11,49 +12,69 @@ import (
 	"strings"
 
 	rp "cunicu.li/go-rosenpass"
-	"golang.zx2c4.com/wireguard/wgctrl"
-	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
+	"gopkg.in/ini.v1"
 )
 
 func FromWireGuardInterface(intfName string) (cfgFile File, err error) {
-	client, err := wgctrl.New()
+	wgDir := "/etc/wireguard"
+
+	wgCfgFile := filepath.Join(wgDir, intfName+".conf")
+	wgCfg, err := ini.Load(wgCfgFile)
 	if err != nil {
-		return cfgFile, fmt.Errorf("failed to create wg cleint: %w", err)
+		return cfgFile, fmt.Errorf("failed to load config file")
 	}
 
-	dir := filepath.Join("/etc/wireguard", intfName)
-	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
+	intfDir := filepath.Join(wgDir, intfName)
+	if fi, err := os.Stat(intfDir); err != nil || !fi.IsDir() {
 		return cfgFile, fmt.Errorf("missing configuration for interface: %s", intfName)
 	}
 
-	dev, err := client.Device(intfName)
-	if err != nil {
-		return cfgFile, fmt.Errorf("failed to get interface: %w", err)
-	}
+	intfSection := wgCfg.Section("Interface")
 
-	if dev.ListenPort == 0 {
+	listenPortKey := intfSection.Key("ListenPort")
+	if listenPortKey == nil {
 		return cfgFile, errors.New("missing listen port")
 	}
 
-	emptyKey := wgtypes.Key{}
-	if dev.PublicKey == emptyKey {
-		return cfgFile, errors.New("missing public key")
+	listenPort, err := listenPortKey.Int()
+	if err != nil {
+		return cfgFile, fmt.Errorf("failed to get listen port: %w", err)
+	}
+
+	privateKey := intfSection.Key("PrivateKey")
+	if privateKey == nil {
+		return cfgFile, errors.New("missing private key")
 	}
 
 	cfgFile = File{
-		PublicKey: filepath.Join(dir, "pqpk"),
-		SecretKey: filepath.Join(dir, "pqsk"),
+		PublicKey: filepath.Join(intfDir, "pqpk"),
+		SecretKey: filepath.Join(intfDir, "pqsk"),
 		ListenAddrs: []string{
-			fmt.Sprintf("0.0.0.0:%d", dev.ListenPort), //nolint:forbidigo
-			fmt.Sprintf("[::]:%d", dev.ListenPort),    //nolint:forbidigo
+			fmt.Sprintf("0.0.0.0:%d", listenPort), //nolint:forbidigo
+			fmt.Sprintf("[::]:%d", listenPort),    //nolint:forbidigo
 		},
 		ListenSinglePort: true,
 	}
 
-	for _, peer := range dev.Peers {
-		pk := strings.ReplaceAll(peer.PublicKey.String(), string(filepath.Separator), "")
-		pkFile := fmt.Sprintf("%s/%s.pqpk", dir, pk)   //nolint:forbidigo
-		pskFile := fmt.Sprintf("%s/%s.pqpsk", dir, pk) //nolint:forbidigo
+	peerSections, err := wgCfg.SectionsByName("Peer")
+	if err != nil {
+		return cfgFile, fmt.Errorf("failed to find peer configs: %w", err)
+	}
+
+	for _, peerSection := range peerSections {
+		pkKey := peerSection.Key("PublicKey")
+		if pkKey == nil {
+			return cfgFile, fmt.Errorf("missing public key")
+		}
+
+		pkBytes, err := base64.StdEncoding.DecodeString(pkKey.String())
+		if err != nil || len(pkBytes) != 32 {
+			return cfgFile, fmt.Errorf("failed to parse public key: %w", err)
+		}
+
+		pk := strings.ReplaceAll(pkKey.String(), string(filepath.Separator), "")
+		pkFile := fmt.Sprintf("%s/%s.pqpk", intfDir, pk)   //nolint:forbidigo
+		pskFile := fmt.Sprintf("%s/%s.pqpsk", intfDir, pk) //nolint:forbidigo
 
 		if fi, err := os.Stat(pkFile); err != nil || fi.IsDir() {
 			continue
@@ -63,12 +84,12 @@ func FromWireGuardInterface(intfName string) (cfgFile File, err error) {
 			PublicKey: pkFile,
 			WireGuard: &WireGuardSection{
 				Interface: intfName,
-				PublicKey: rp.Key(peer.PublicKey),
+				PublicKey: rp.Key(pkBytes),
 			},
 		}
 
-		if peer.Endpoint != nil {
-			ep := peer.Endpoint.String()
+		if epKey := peerSection.Key("Endpoint"); epKey != nil {
+			ep := epKey.String()
 			cfgPeer.Endpoint = &ep
 		}
 
