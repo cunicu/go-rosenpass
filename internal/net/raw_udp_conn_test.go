@@ -7,6 +7,7 @@ package net_test
 
 import (
 	"net"
+	"os"
 	"testing"
 	"time"
 
@@ -60,6 +61,10 @@ func test(t *testing.T, shouldSucceed bool, msg []byte, lAddr, rAddr *net.UDPAdd
 }
 
 func TestRawUDPConn(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("Single port require root privileges")
+	}
+
 	dataRosenpass := []byte{0x81, 0x01, 0x02, 0x03}
 	dataWireGuard := []byte{0x01, 0x01, 0x02, 0x03}
 

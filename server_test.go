@@ -9,6 +9,7 @@ import (
 	"math"
 	"math/rand"
 	"net"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -47,6 +48,10 @@ func TestServer(t *testing.T) {
 	})
 
 	t.Run("Singleport", func(t *testing.T) {
+		if os.Geteuid() != 0 {
+			t.Skip("Single port require root privileges")
+		}
+
 		testHandshake(t, newSinglePortGoServer, newSinglePortGoServer, rp.GenerateKeyPair, rp.GenerateKeyPair, 1)
 	})
 }
