@@ -7,9 +7,10 @@ package net
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"log/slog"
-	"math/rand"
+	"math/big"
 	"net"
 	"time"
 
@@ -48,7 +49,12 @@ func ListenRawUDP(network string, addr *net.UDPAddr) (c *RawUDPConn, err error) 
 	}
 
 	if addr.Port == 0 {
-		addr.Port = 1024 + rand.Intn(65535-1024) //nolint:gosec
+		port, err := rand.Int(rand.Reader, big.NewInt(65535-1024))
+		if err != nil {
+			return nil, err
+		}
+
+		addr.Port = 1024 + int(port.Int64())
 	}
 
 	if addr.IP == nil {
