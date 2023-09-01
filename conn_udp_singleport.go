@@ -14,6 +14,8 @@ import (
 	netx "cunicu.li/go-rosenpass/internal/net"
 )
 
+var _ Conn = (*SinglePortUDPConn)(nil)
+
 type SinglePortUDPConn struct {
 	listenAddrs []*net.UDPAddr
 	conns       map[string]*netx.RawUDPConn
