@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"math/big"
 	"time"
 )
 
@@ -177,11 +178,8 @@ func (hs *initiatorHandshake) retransmitDelay() time.Duration {
 		after = RetransmitDelayEnd.Seconds()
 	}
 
-	buf := make([]byte, 4)
-	if n, err := rand.Read(buf); err == nil && n == 4 {
-		irand := binary.LittleEndian.Uint32(buf)
-		frand := float64(irand) / math.MaxUint32
-
+	if n, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64)); err == nil {
+		frand := float64(n.Int64()) / math.MaxUint64
 		after += (2*frand - 1) * RetransmitDelayJitter.Seconds()
 	}
 
