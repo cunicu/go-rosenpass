@@ -26,6 +26,9 @@ type File struct {
 	// A host:port pair to identify the interface and port to listen for handshake messages
 	ListenAddrs []string `toml:"listen,omitempty" comment:"A host:port pair to identify the interface and port to listen for handshake messages"`
 
+	// Use eBPF to listen and share the same port with an existing WireGuard interface
+	ListenSinglePort bool `toml:"single_port,omitempty"`
+
 	// Set to 'Verbose' or 'Quiet'
 	Verbosity string `toml:"verbosity,omitempty" comment:"Set to 'Verbose' or 'Quiet'"`
 
@@ -78,6 +81,8 @@ func (f *File) DumpFile(fn string) error {
 }
 
 func (f *File) ToConfig() (c rp.Config, err error) {
+	c.ListenSinglePort = f.ListenSinglePort
+
 	for _, las := range f.ListenAddrs {
 		addr, err := net.ResolveUDPAddr("udp", las)
 		if err != nil {

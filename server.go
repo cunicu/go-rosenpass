@@ -32,14 +32,18 @@ type Server struct {
 	logger *slog.Logger
 }
 
-func NewUDPServer(cfg Config) (*Server, error) {
+func NewUDPServer(cfg Config) (_ *Server, err error) {
 	if len(cfg.ListenAddrs) == 0 {
 		// Listen on random port on all interfaces by default
 		cfg.ListenAddrs = append(cfg.ListenAddrs, &net.UDPAddr{})
 	}
 
-	var err error
-	if cfg.Conn, err = NewUDPConn(cfg.ListenAddrs); err != nil {
+	if cfg.ListenSinglePort {
+		cfg.Conn, err = NewSinglePortUDPConn(cfg.ListenAddrs)
+	} else {
+		cfg.Conn, err = NewUDPConn(cfg.ListenAddrs)
+	}
+	if err != nil {
 		return nil, err
 	}
 

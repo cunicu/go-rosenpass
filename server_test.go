@@ -33,32 +33,27 @@ func (h *handshakeHandler) HandshakeExpired(pid rp.PeerID) {
 }
 
 func TestServer(t *testing.T) {
-	run := func(t *testing.T, newGoServer, newRustServer func(*testing.T, string, rp.Config) (test.Server, error), numHandshakes int) {
-		t.Run("Go-to-Go", func(t *testing.T) {
-			testHandshake(t, newGoServer, newGoServer, rp.GenerateKeyPair, rp.GenerateKeyPair, numHandshakes)
-		})
-
-		t.Run("Rust-to-Go", func(t *testing.T) {
-			testHandshake(t, newRustServer, newGoServer, rp.GenerateRound2KeyPair, rp.GenerateKeyPair, numHandshakes)
-		})
-
-		t.Run("Go-to-Rust", func(t *testing.T) {
-			testHandshake(t, newGoServer, newRustServer, rp.GenerateKeyPair, rp.GenerateRound2KeyPair, numHandshakes)
-		})
-	}
-
 	t.Run("Rust-to-Rust", func(t *testing.T) {
 		// We only perform a single handshake as the tests should not wait for the hardcoded rekey timeout
 		testHandshake(t, newStandaloneRustServer, newStandaloneRustServer, rp.GenerateRound2KeyPair, rp.GenerateRound2KeyPair, 1)
 	})
 
 	t.Run("In-process", func(t *testing.T) {
-		run(t, newGoServer, newStandaloneRustServer, 4)
+		testInterop(t, newGoServer, newStandaloneRustServer, 4)
 	})
 
 	t.Run("Standalone", func(t *testing.T) {
-		run(t, newStandaloneGoServer, newStandaloneRustServer, 1)
+		testInterop(t, newStandaloneGoServer, newStandaloneRustServer, 1)
 	})
+
+	t.Run("Singleport", func(t *testing.T) {
+		testHandshake(t, newSinglePortGoServer, newSinglePortGoServer, rp.GenerateKeyPair, rp.GenerateKeyPair, 1)
+	})
+}
+
+func newSinglePortGoServer(t *testing.T, name string, cfg rp.Config) (test.Server, error) {
+	cfg.ListenSinglePort = true
+	return newGoServer(t, name, cfg)
 }
 
 func newGoServer(_ *testing.T, name string, cfg rp.Config) (test.Server, error) {
@@ -81,6 +76,20 @@ func newStandaloneRustServer(t *testing.T, name string, cfg rp.Config) (test.Ser
 	cfg.Logger = slog.Default().With("node", name)
 
 	return test.NewStandaloneServer(cfg, "rosenpass", dir)
+}
+
+func testInterop(t *testing.T, newGoServer, newRustServer func(*testing.T, string, rp.Config) (test.Server, error), numHandshakes int) {
+	t.Run("Go-to-Go", func(t *testing.T) {
+		testHandshake(t, newGoServer, newGoServer, rp.GenerateKeyPair, rp.GenerateKeyPair, numHandshakes)
+	})
+
+	t.Run("Rust-to-Go", func(t *testing.T) {
+		testHandshake(t, newRustServer, newGoServer, rp.GenerateRound2KeyPair, rp.GenerateKeyPair, numHandshakes)
+	})
+
+	t.Run("Go-to-Rust", func(t *testing.T) {
+		testHandshake(t, newGoServer, newRustServer, rp.GenerateKeyPair, rp.GenerateRound2KeyPair, numHandshakes)
+	})
 }
 
 func testHandshake(t *testing.T, newServerAlice, newServerBob func(*testing.T, string, rp.Config) (test.Server, error), newKeyPairAlice, newKeyPairBob func() (rp.PublicKey, rp.SecretKey, error), numHandshakes int) {

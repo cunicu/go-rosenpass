@@ -75,22 +75,8 @@ func (c *UDPConn) Send(pl payload, spkt spk, ep Endpoint) error {
 		return errInvalidEndpoint
 	}
 
-	e := envelope{
-		payload: pl,
-	}
-
-	switch pl.(type) {
-	case *initHello:
-		e.typ = msgTypeInitHello
-	case *respHello:
-		e.typ = msgTypeRespHello
-	case *initConf:
-		e.typ = msgTypeInitConf
-	case *emptyData:
-		e.typ = msgTypeEmptyData
-	}
-
-	network := networkFromAddr((*net.UDPAddr)(uep))
+	addr := (*net.UDPAddr)(uep)
+	network := networkFromAddr(addr)
 
 	// Check if we are on DragonFly or OpenBSD systems
 	// which require two independent sockets for listening
@@ -102,14 +88,7 @@ func (c *UDPConn) Send(pl payload, spkt spk, ep Endpoint) error {
 		}
 	}
 
-	buf := e.MarshalBinaryAndSeal(spkt)
-	if n, err := conn.WriteToUDP(buf, (*net.UDPAddr)(uep)); err != nil {
-		return err
-	} else if n != len(buf) {
-		return fmt.Errorf("partial write")
-	}
-
-	return nil
+	return sendToConn(conn, addr, pl, spkt)
 }
 
 func (c *UDPConn) LocalEndpoints() (eps []Endpoint, err error) {
@@ -156,12 +135,12 @@ func networkFromAddr(a *net.UDPAddr) string {
 	return "udp6"
 }
 
-func receiveFromConn(conn *net.UDPConn) ReceiveFunc {
+func receiveFromConn(conn net.PacketConn) ReceiveFunc {
 	return func(spkm spk) (payload, Endpoint, error) {
 		// TODO: Check for appropriate MTU
 		buf := make([]byte, 1500)
 
-		n, from, err := conn.ReadFromUDP(buf)
+		n, rAddr, err := conn.ReadFrom(buf)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to read: %w", err)
 		}
@@ -173,6 +152,38 @@ func receiveFromConn(conn *net.UDPConn) ReceiveFunc {
 			return nil, nil, fmt.Errorf("parsed partial packet")
 		}
 
-		return e.payload, (*UDPEndpoint)(from), nil
+		rAddrUDP, ok := rAddr.(*net.UDPAddr)
+		if !ok {
+			return nil, nil, errors.New("invalid remote address type")
+		}
+
+		return e.payload, (*UDPEndpoint)(rAddrUDP), nil
 	}
+}
+
+func sendToConn(conn net.PacketConn, addr net.Addr, pl payload, spkt spk) error {
+	e := envelope{
+		payload: pl,
+	}
+
+	switch pl.(type) {
+	case *initHello:
+		e.typ = msgTypeInitHello
+	case *respHello:
+		e.typ = msgTypeRespHello
+	case *initConf:
+		e.typ = msgTypeInitConf
+	case *emptyData:
+		e.typ = msgTypeEmptyData
+	}
+
+	buf := e.MarshalBinaryAndSeal(spkt)
+
+	if n, err := conn.WriteTo(buf, addr); err != nil {
+		return err
+	} else if n != len(buf) {
+		return fmt.Errorf("partial write")
+	}
+
+	return nil
 }
