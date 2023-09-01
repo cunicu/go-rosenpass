@@ -4,6 +4,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 
 	"cunicu.li/go-rosenpass/config"
@@ -26,6 +27,19 @@ func exchange(_ *cobra.Command, args []string) error {
 	return doExchange(cfgFile)
 }
 
+func exchangeIntf(_ *cobra.Command, args []string) error {
+	intfName := args[0]
+
+	cfgFile, err := config.FromWireGuardInterface(intfName)
+	if err != nil {
+		return err
+	}
+
+	setupLogging(true)
+
+	return doExchange(cfgFile)
+}
+
 func exchangeConfig(_ *cobra.Command, args []string) error {
 	cfgFilename := args[0]
 	var cfgFile config.File
@@ -42,6 +56,10 @@ func exchangeConfig(_ *cobra.Command, args []string) error {
 }
 
 func doExchange(cfgFile config.File) error {
+	if len(cfgFile.Peers) == 0 {
+		return errors.New("no peers configured")
+	}
+
 	cfg, err := cfgFile.ToConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
