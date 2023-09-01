@@ -18,10 +18,55 @@ The implementation aims to be compatible with the reference implementation in Ru
 
 ## Installation
 
-### Pre-build binaries
+### Binary releases
 
 _go-rosenpass_ distributes builds via [GitHub Releases](https://github.com/cunicu/go-rosenpass/releases).
 You can download a pre-built binary from there.
+
+### From source
+
+```bash
+go install cunicu.li/go-rosenpass/cmd@latest
+```
+
+## Example Setup
+
+```bash
+# Generate our own WireGuard key pair
+WG_PRIVATE_KEY=$(wg genkey)
+WG_PUBLIC_KEY=$(wg pubkey <<< ${WG_PRIVATE_KEY})
+
+# Generate our own Rosenpass key pair
+go-rosenpass gen-keys-intf wg0
+
+# Show our details
+echo "Your hostname: $(hostname)"
+echo "Your WireGuard public key: ${WG_PUBLIC_KEY}"
+
+# Query the peer details
+read -p "Enter your peers hostname: " PEER
+read -p "Enter your peers WireGuard public key: " WG_PUBLIC_KEY_PEER
+
+# Exchange Rosenpass public key
+scp /etc/wireguard/wg0/pqpk root@${PEER}:/etc/wireguard/wg0/${WG_PUBLIC_KEY//\//}.pqpk
+
+# Generate wg-quick configuration
+cat <<EOF >> /etc/wireguard/wg0.conf
+[Interface]
+PrivateKey = ${WG_PRIVATE_KEY}
+ListenPort = 51820
+
+PostUp = go-rosenpass exchange-intf %i & echo $! > /run/go-rosenpass.%i.pid
+PreDown = pkill -F /run/go-rosenpass.%i.pid || true
+
+[Peer]
+PublicKey = ${WG_PUBLIC_KEY_PEER}
+Endpoint = ${PEER}:51820
+EOF
+
+# Bring connection up
+wg-quick up wg0
+```
 
 ## References
 

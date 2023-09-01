@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"cunicu.li/go-rosenpass/config"
 
@@ -14,6 +15,20 @@ import (
 
 	"github.com/spf13/cobra"
 )
+
+func genKeyIntf(_ *cobra.Command, args []string) error {
+	intfName := args[0]
+
+	dir := filepath.Join("/etc/wireguard", intfName)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("failed to generate directory: %w", err)
+	}
+
+	pkPath := filepath.Join(dir, "pqpk")
+	skPath := filepath.Join(dir, "pqsk")
+
+	return doGenKeys(pkPath, skPath)
+}
 
 func genKey(_ *cobra.Command, args []string) error {
 	if len(args) > 0 {
@@ -32,6 +47,10 @@ func genKey(_ *cobra.Command, args []string) error {
 		return errors.New("Either a config-file or both public-key and secret-key file are required")
 	}
 
+	return doGenKeys(pkPath, skPath)
+}
+
+func doGenKeys(pkPath, skPath string) error {
 	if _, err := os.Stat(pkPath); err == nil && !force {
 		return fmt.Errorf("public-key file \"%s\" exist, refusing to overwrite it", pkPath)
 	}

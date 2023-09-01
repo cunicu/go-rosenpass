@@ -54,11 +54,19 @@ var (
 	}
 
 	genKeyCmd = &cobra.Command{
-		Use:   "gen-keys [flags]  [config-file]",
+		Use:   "gen-keys [flags] [config-file]",
 		Short: "Generate a keypair to use in the exchange command later.",
 		Long:  "Send the public-key file to your communication partner and keep the secret-key file a secret!",
 		Args:  cobra.MaximumNArgs(1),
 		RunE:  genKey,
+	}
+
+	genKeyInfCmd = &cobra.Command{
+		Use:   "gen-keys-intf [flags] interface-name",
+		Short: "Generate a keypair to use in the exchange-intf command later.",
+		Long:  "Send the public-key file to your communication partner and keep the secret-key file a secret!",
+		Args:  cobra.ExactArgs(1),
+		RunE:  genKeyIntf,
 	}
 
 	genManCmd = &cobra.Command{
@@ -81,6 +89,13 @@ var (
 		Long:  "This will parse the configuration file and perform the key exchange with the specified peers. If a peer's endpoint is specified, this Rosenpass instance will try to initiate a key exchange with the peer, otherwise only initiation attempts from the peer will be responded to.",
 		Args:  cobra.ExactArgs(1),
 		RunE:  exchangeConfig,
+	}
+
+	exchangeIntfCmd = &cobra.Command{
+		Use:   "exchange-intf [flags] interface-name",
+		Short: "Start Rosenpass in server mode and perform auto configuration based on the provided WireGuard interface name",
+		Args:  cobra.ExactArgs(1),
+		RunE:  exchangeIntf,
 	}
 
 	exchangeCmd = &cobra.Command{
@@ -112,9 +127,11 @@ func main() {
 	f.BoolVarP(&verbose, "verbose", "v", false, "enable verbose output")
 
 	rootCmd.AddCommand(genKeyCmd)
+	rootCmd.AddCommand(genKeyInfCmd)
 	rootCmd.AddCommand(genConfigCmd)
 	rootCmd.AddCommand(genManCmd)
 	rootCmd.AddCommand(exchangeConfigCmd)
+	rootCmd.AddCommand(exchangeIntfCmd)
 	rootCmd.AddCommand(exchangeCmd)
 	rootCmd.AddCommand(validateCmd)
 	rootCmd.AddCommand(manCmd)
