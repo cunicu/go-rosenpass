@@ -7,7 +7,7 @@ require (
 	github.com/cloudflare/circl v1.3.3
 	github.com/gopacket/gopacket v1.1.1
 	github.com/mdlayher/socket v0.4.1
-	github.com/pelletier/go-toml/v2 v2.0.9
+	github.com/pelletier/go-toml/v2 v2.1.0
 	github.com/spf13/cobra v1.7.0
 	golang.org/x/crypto v0.12.0
 	golang.org/x/sys v0.11.0
