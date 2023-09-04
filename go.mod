@@ -38,4 +38,4 @@ require (
 // For Classic McEliece support
 // Based on older version of https://github.com/cloudflare/circl/pull/378
 // implementing the round 3 version of Classic McEliece without plaintext confirmation
-replace github.com/cloudflare/circl => github.com/cunicu/circl v0.0.0-20230801113412-fec58fc7b5f6
+replace github.com/cloudflare/circl => github.com/cunicu/circl 099d31380290
