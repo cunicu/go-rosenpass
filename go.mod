@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/cilium/ebpf v0.12.2
-	github.com/cloudflare/circl v1.3.3
+	github.com/cloudflare/circl v1.3.6
 	github.com/gopacket/gopacket v1.1.1
 	github.com/mdlayher/socket v0.5.0
 	github.com/pelletier/go-toml/v2 v2.1.0
