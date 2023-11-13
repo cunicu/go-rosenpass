@@ -9,7 +9,7 @@ require (
 	github.com/mdlayher/socket v0.5.0
 	github.com/pelletier/go-toml/v2 v2.1.0
 	github.com/spf13/cobra v1.8.0
-	golang.org/x/crypto v0.14.0
+	golang.org/x/crypto v0.15.0
 	golang.org/x/sys v0.14.1-0.20231108175955-e4099bfacb8c
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20230429144221-925a1e7659e6
 )
