@@ -32,7 +32,7 @@ jobs:
         ninja-build
 
     - name: Install rosenpass from git
-      uses: baptiste0928/cargo-install@v2
+      uses: baptiste0928/cargo-install@v3
       with:
         crate: rosenpass
         git: https://github.com/rosenpass/rosenpass
