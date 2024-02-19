@@ -1,9 +1,11 @@
 module cunicu.li/go-rosenpass
 
-go 1.21
+go 1.21.0
+
+toolchain go1.22.0
 
 require (
-	github.com/cilium/ebpf v0.12.3
+	github.com/cilium/ebpf v0.13.0
 	github.com/cloudflare/circl v1.3.3
 	github.com/gopacket/gopacket v1.2.0
 	github.com/mdlayher/socket v0.5.0
