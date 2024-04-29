@@ -6,7 +6,7 @@ module cunicu.li/go-rosenpass
 go 1.22.2
 
 require (
-	github.com/cilium/ebpf v0.14.0
+	github.com/cilium/ebpf v0.15.0
 	github.com/cloudflare/circl v1.3.3
 	github.com/gopacket/gopacket v1.2.0
 	github.com/mdlayher/socket v0.5.1
