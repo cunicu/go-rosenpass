@@ -13,7 +13,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.2
 	github.com/spf13/cobra v1.8.0
 	golang.org/x/crypto v0.23.0
-	golang.org/x/sys v0.20.0
+	golang.org/x/sys v0.21.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20230429144221-925a1e7659e6
 )
 
