@@ -9,4 +9,9 @@ go-rosenpass:
 lint:
 	golangci-lint run ./...
 
-.PHONY: lint all go-rosenpass
+reuse:
+	reuse lint
+
+check: lint reuse
+
+.PHONY: lint reuse check all go-rosenpass
