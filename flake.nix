@@ -5,27 +5,33 @@
     flake-utils.url = "github:numtide/flake-utils";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
-  outputs = {
-    self,
-    nixpkgs,
-    flake-utils,
-  }:
-    flake-utils.lib.eachDefaultSystem
-    (
-      system: let
-        pkgs = nixpkgs.legacyPackages.${system};
-      in {
-        devShell = pkgs.mkShell {
-          buildInputs = with pkgs;
-            [
-              go
-              golangci-lint
-              reuse
-            ];
+  outputs =
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
+      let
+        overlay = final: prev: { go-rosenpass = final.callPackage ./default.nix { }; };
 
-            packages = with pkgs; [
-              rosenpass
-            ];
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = [ overlay ];
+        };
+      in
+      {
+        packages.default = pkgs.go-rosenpass;
+        overlays.default = overlay;
+
+        devShell = pkgs.mkShell {
+          inputsFrom = with pkgs; [ go-rosenpass ];
+
+          buildInputs = with pkgs; [
+            golangci-lint
+            reuse
+          ];
         };
 
         formatter = nixpkgs.nixfmt-rfc-style;
