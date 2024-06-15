@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Steffen Vogel <post@steffenvogel.de>
+# SPDX-FileCopyrightText: 2023-2024 Steffen Vogel <post@steffenvogel.de>
 # SPDX-License-Identifier: Apache-2.0
 
 # yaml-language-server: $schema=https://raw.githubusercontent.com/SchemaStore/schemastore/master/src/schemas/json/github-workflow.json
@@ -12,13 +12,5 @@ on:
   pull_request:
 
 jobs:
-  test:
-    name: REUSE
-    runs-on: ubuntu-latest
-  
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-
-    - name: REUSE Compliance Check
-      uses: fsfe/reuse-action@v3
+  reuse:
+    uses: cunicu/.github/.github/workflows/reuse.yaml@v0.2.0
