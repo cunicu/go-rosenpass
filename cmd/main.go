@@ -29,7 +29,7 @@ var (
 		Short:         "Rosenpass is a formally verified, post-quantum secure VPN that uses WireGuard to transport the actual data.",
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		PersistentPreRun: func(_ *cobra.Command, _ []string) {
 			setupLogging(verbose)
 		},
 	}
@@ -38,7 +38,7 @@ var (
 		Use:   "man",
 		Short: "Show the go-rosenpass manpage",
 		Args:  cobra.ArbitraryArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			page := strings.Join(append([]string{"go-rosenpass"}, args...), genManOpts.CommandSeparator)
 			c := exec.Command("man", "1", page)
 			c.Stdout = os.Stdout
