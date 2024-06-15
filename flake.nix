@@ -32,9 +32,11 @@
             golangci-lint
             reuse
           ];
+
+          hardeningDisable = [ "fortify" ];
         };
 
-        formatter = nixpkgs.nixfmt-rfc-style;
+        formatter = pkgs.nixfmt-rfc-style;
       }
     );
 }
