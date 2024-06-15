@@ -74,9 +74,9 @@ wg-quick up wg0
 - <https://rosenpass.eu/>
 - <https://media.ccc.de/v/eh20-4-rosenpass-ein-vpn-zum-schutz-vor-quantencomputern>
 
-## Authors
+## Contact
 
-- Steffen Vogel ([@stv0g](https://github.com/stv0g))
+Please have a look at the contact page: [cunicu.li/docs/contact](https://cunicu.li/docs/contact).
 
 ## License
 
