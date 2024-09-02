@@ -179,8 +179,8 @@ func (c *RawUDPConn) WriteTo(buf []byte, rAddr net.Addr) (n int, err error) {
 	payload := gopacket.Payload(buf)
 
 	udp := &layers.UDP{
-		SrcPort: layers.UDPPort(c.localAddr.Port),
-		DstPort: layers.UDPPort(rUDPAddr.Port),
+		SrcPort: layers.UDPPort(c.localAddr.Port), // nolint: gosec
+		DstPort: layers.UDPPort(rUDPAddr.Port), // nolint: gosec
 	}
 
 	var nwLayer gopacket.NetworkLayer
