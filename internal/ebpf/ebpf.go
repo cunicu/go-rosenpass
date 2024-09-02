@@ -37,7 +37,7 @@ func RosenpassFilterEbpf(lPort int) asm.Instructions {
 		asm.LoadInd(asm.R0, asm.R7, 2, asm.Half).WithSymbol("load"),
 
 		// Skip if is not matching our listen port
-		asm.JNE.Imm(asm.R0, int32(lPort), "skip"),
+		asm.JNE.Imm(asm.R0, int32(lPort), "skip"), // nolint: gosec
 
 		// Load WireGuard packet type
 		asm.LoadInd(asm.R0, asm.R7, 8, asm.Byte),
