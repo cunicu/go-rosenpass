@@ -9,7 +9,7 @@ toolchain go1.23.2
 
 require (
 	github.com/cilium/ebpf v0.16.0
-	github.com/cloudflare/circl v1.3.3
+	github.com/cloudflare/circl v1.5.0
 	github.com/gopacket/gopacket v1.3.0
 	github.com/mdlayher/socket v0.5.1
 	github.com/pelletier/go-toml/v2 v2.2.3
