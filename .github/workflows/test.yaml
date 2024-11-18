@@ -70,6 +70,6 @@ jobs:
         if-no-files-found: error
 
     - name: Report integration test coverage to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         files: cover.profile
