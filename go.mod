@@ -8,7 +8,7 @@ go 1.23.0
 toolchain go1.23.5
 
 require (
-	github.com/cilium/ebpf v0.17.1
+	github.com/cilium/ebpf v0.17.2
 	github.com/cloudflare/circl v1.3.3
 	github.com/gopacket/gopacket v1.3.1
 	github.com/mdlayher/socket v0.5.1
