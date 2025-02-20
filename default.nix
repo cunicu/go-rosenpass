@@ -10,7 +10,7 @@ buildGoModule {
   pname = "go-rosenpass";
   version = "0.4.0";
   src = ./.;
-  vendorHash = "sha256-lklY0LhALjzVC41Jhc8mFkGGdGbfSmDQ0koYYOdENA0=";
+  vendorHash = "sha256-VT5lDrrhG75ydnYZ93Y/Z0qIcAEsSxdVfq2DqSQP4Uc=";
 
   subPackages = [ "cmd" ];
 
