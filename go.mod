@@ -8,7 +8,7 @@ go 1.23.0
 toolchain go1.24.1
 
 require (
-	github.com/cilium/ebpf v0.17.3
+	github.com/cilium/ebpf v0.18.0
 	github.com/cloudflare/circl v1.3.3
 	github.com/gopacket/gopacket v1.3.1
 	github.com/mdlayher/socket v0.5.1
@@ -32,7 +32,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
-	golang.org/x/net v0.33.0 // indirect
+	golang.org/x/net v0.36.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173 // indirect
 	gopkg.in/ini.v1 v1.67.0
