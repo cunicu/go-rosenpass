@@ -2,53 +2,67 @@
 # SPDX-FileCopyrightText: 2023 Steffen Vogel <post@steffenvogel.de>
 # SPDX-License-Identifier: Apache-2.0
 
+version: "2"
 linters:
   enable:
-  - forbidigo
-  - gosec
-  - gosimple
-  - godot
-  - tagliatelle
-  - revive
-  - staticcheck
-  - gocritic
-  - depguard
-
-linters-settings:
-
-  depguard:
-    rules:
-      main:
-        files:
-        - "!**/*_test.go"
-        allow:
-        - $gostd
-        - cunicu.li/go-rosenpass
-        - github.com/cilium/ebpf
-        - github.com/cilium/ebpf/asm
-        - github.com/cloudflare/circl/kem
-        - github.com/cloudflare/circl/kem/kyber/kyber512
-        - github.com/cloudflare/circl/kem/mceliece/mceliece460896
-        - github.com/gopacket/gopacket
-        - github.com/gopacket/gopacket/layers
-        - github.com/mdlayher/socket
-        - github.com/pelletier/go-toml/v2
-        - github.com/spf13/cobra
-        - golang.org/x/crypto/blake2b
-        - golang.org/x/crypto/chacha20poly1305
-        - golang.org/x/net/bpf
-        - golang.org/x/sys/unix
-        - golang.zx2c4.com/wireguard/wgctrl
-        - gopkg.in/ini.v1
-        deny:
-        - pkg: math/rand
-          desc: Use cryptographic PRNG
-
-  forbidigo:
-    forbid:
-    - ^os.Exit$
-    - ^panic$
-    - ^print(ln)?$
-    - ^unsafe\.
-    - ^log\.
-    - ^fmt\.(Printf|Scanf|Sprintf|Sscanf)$
+    - depguard
+    - forbidigo
+    - gocritic
+    - godot
+    - gosec
+    - revive
+    - tagliatelle
+  settings:
+    depguard:
+      rules:
+        main:
+          files:
+            - '!**/*_test.go'
+          allow:
+            - $gostd
+            - cunicu.li/go-rosenpass
+            - github.com/cilium/ebpf
+            - github.com/cilium/ebpf/asm
+            - github.com/cloudflare/circl/kem
+            - github.com/cloudflare/circl/kem/kyber/kyber512
+            - github.com/cloudflare/circl/kem/mceliece/mceliece460896
+            - github.com/gopacket/gopacket
+            - github.com/gopacket/gopacket/layers
+            - github.com/mdlayher/socket
+            - github.com/pelletier/go-toml/v2
+            - github.com/spf13/cobra
+            - golang.org/x/crypto/blake2b
+            - golang.org/x/crypto/chacha20poly1305
+            - golang.org/x/net/bpf
+            - golang.org/x/sys/unix
+            - golang.zx2c4.com/wireguard/wgctrl
+            - gopkg.in/ini.v1
+          deny:
+            - pkg: math/rand
+              desc: Use cryptographic PRNG
+    forbidigo:
+      forbid:
+        - pattern: ^os.Exit$
+        - pattern: ^panic$
+        - pattern: ^print(ln)?$
+        - pattern: ^unsafe\.
+        - pattern: ^log\.
+        - pattern: ^fmt\.(Printf|Scanf|Sprintf|Sscanf)$
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
