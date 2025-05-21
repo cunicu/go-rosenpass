@@ -14,7 +14,7 @@ var _ Conn = (*SinglePortUDPConn)(nil)
 
 type SinglePortUDPConn struct{}
 
-func NewSinglePortUDPConn(la []*net.UDPAddr) (*SinglePortUDPConn, error) {
+func NewSinglePortUDPConn(_ []*net.UDPAddr) (*SinglePortUDPConn, error) {
 	return nil, errors.ErrUnsupported
 }
 
@@ -26,7 +26,7 @@ func (c *SinglePortUDPConn) Open() ([]ReceiveFunc, error) {
 	return nil, errors.ErrUnsupported
 }
 
-func (c *SinglePortUDPConn) Send(pl payload, spkm spk, cep Endpoint) error {
+func (c *SinglePortUDPConn) Send(_ payload, _ spk, _ Endpoint) error {
 	return errors.ErrUnsupported
 }
 

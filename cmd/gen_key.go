@@ -16,6 +16,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var errEitherConfigOrKeys = errors.New("either a config-file or both public-key and secret-key file are required")
+
 func genKeyIntf(_ *cobra.Command, args []string) error {
 	intfName := args[0]
 
@@ -44,7 +46,7 @@ func genKey(_ *cobra.Command, args []string) error {
 	}
 
 	if pkPath == "" || skPath == "" {
-		return errors.New("Either a config-file or both public-key and secret-key file are required")
+		return errEitherConfigOrKeys
 	}
 
 	return doGenKeys(pkPath, skPath)
