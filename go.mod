@@ -5,7 +5,7 @@ module cunicu.li/go-rosenpass
 
 go 1.23.0
 
-toolchain go1.24.4
+toolchain go1.24.5
 
 require (
 	github.com/cilium/ebpf v0.19.0
