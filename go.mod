@@ -19,7 +19,7 @@ require (
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20241231184526-a9ab2273dd10
 )
 
-require github.com/stretchr/testify v1.10.0 // testing
+require github.com/stretchr/testify v1.11.0 // testing
 
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
